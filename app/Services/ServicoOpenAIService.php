@@ -22,11 +22,19 @@ class ServicoOpenAIService
     public function processarPergunta(string $pergunta): array
     {
         Log::info('=== PROCESSANDO PERGUNTA OPENAI ===');
+        Log::info('Timestamp: ' . now()->toISOString());
+        Log::info('Modelo: ' . $this->modelo);
         Log::info('Pergunta: ' . substr($pergunta, 0, 200) . '...');
+        Log::info('Tamanho da pergunta: ' . strlen($pergunta) . ' caracteres');
         
         try {
+            $inicioRequisicao = microtime(true);
             $resposta = $this->enviarRequisicaoGPT($pergunta);
-            Log::info('Resposta GPT recebida com sucesso: ' . substr($resposta, 0, 200) . '...');
+            $tempoRequisicao = microtime(true) - $inicioRequisicao;
+            
+            Log::info('✅ Resposta GPT recebida com sucesso em ' . round($tempoRequisicao, 3) . ' segundos');
+            Log::info('Resposta: ' . substr($resposta, 0, 200) . '...');
+            Log::info('Tamanho da resposta: ' . strlen($resposta) . ' caracteres');
             
             return [
                 'sucesso' => true,

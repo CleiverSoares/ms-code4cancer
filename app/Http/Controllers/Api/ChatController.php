@@ -24,12 +24,23 @@ class ChatController extends Controller
      */
     public function processarMensagem(Request $request): JsonResponse
     {
-        // Log da requisição recebida
+        // Log detalhado da requisição
         Log::info('=== REQUISIÇÃO CHAT SOFIA RECEBIDA ===');
+        Log::info('Timestamp: ' . now()->toISOString());
         Log::info('IP: ' . $request->ip());
         Log::info('User-Agent: ' . $request->userAgent());
+        Log::info('Method: ' . $request->method());
+        Log::info('URL: ' . $request->fullUrl());
         Log::info('Headers: ' . json_encode($request->headers->all()));
         Log::info('Body: ' . $request->getContent());
+        
+        // Log do usuário autenticado (se disponível)
+        $usuario = $request->get('usuario_autenticado');
+        if ($usuario) {
+            Log::info('Usuário autenticado: ' . $usuario->nome . ' (' . $usuario->email . ')');
+        } else {
+            Log::warning('Requisição sem usuário autenticado');
+        }
         
         $validator = Validator::make($request->all(), [
             'mensagem' => 'required|string|max:1000',
@@ -64,22 +75,41 @@ class ChatController extends Controller
         }
 
         Log::info('Iniciando processamento da mensagem...');
+        Log::info('Tamanho da mensagem: ' . strlen($mensagem) . ' caracteres');
+        Log::info('Histórico de conversa: ' . count($historicoConversa) . ' mensagens');
 
-        // Processar mensagem
-        $resultado = $this->servicoChat->gerarRespostaContextual($mensagem);
+        try {
+            // Processar mensagem
+            $inicioProcessamento = microtime(true);
+            $resultado = $this->servicoChat->gerarRespostaContextual($mensagem);
+            $tempoProcessamento = microtime(true) - $inicioProcessamento;
 
-        Log::info('Resultado do processamento: ' . json_encode($resultado));
+            Log::info('Processamento concluído em ' . round($tempoProcessamento, 3) . ' segundos');
+            Log::info('Resultado do processamento: ' . json_encode($resultado));
 
-        // Adicionar alerta de emergência se detectado
-        if ($validacao['emergencia_detectada'] ?? false) {
-            $resultado['alerta_emergencia'] = $validacao['alerta'];
-            Log::warning('ALERTA DE EMERGÊNCIA DETECTADO: ' . $validacao['alerta']);
+            // Adicionar alerta de emergência se detectado
+            if ($validacao['emergencia_detectada'] ?? false) {
+                $resultado['alerta_emergencia'] = $validacao['alerta'];
+                Log::warning('🚨 ALERTA DE EMERGÊNCIA DETECTADO: ' . $validacao['alerta']);
+            }
+
+            Log::info('=== RESPOSTA ENVIADA ===');
+            Log::info('Status HTTP: ' . ($resultado['sucesso'] ? '200' : '500'));
+            Log::info('Sucesso: ' . ($resultado['sucesso'] ? 'SIM' : 'NÃO'));
+            Log::info('Tamanho da resposta: ' . strlen(json_encode($resultado)) . ' bytes');
+            
+            return response()->json($resultado, $resultado['sucesso'] ? 200 : 500);
+            
+        } catch (\Exception $e) {
+            Log::error('❌ ERRO NO PROCESSAMENTO DA MENSAGEM: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            
+            return response()->json([
+                'sucesso' => false,
+                'erro' => 'Erro interno ao processar mensagem',
+                'timestamp' => now()->toISOString()
+            ], 500);
         }
-
-        Log::info('=== RESPOSTA ENVIADA ===');
-        Log::info('Sucesso: ' . ($resultado['sucesso'] ? 'SIM' : 'NÃO'));
-        
-        return response()->json($resultado, $resultado['sucesso'] ? 200 : 500);
     }
 
     /**
@@ -184,6 +214,17 @@ class ChatController extends Controller
     public function processarAudio(Request $request): JsonResponse
     {
         Log::info('=== PROCESSANDO ÁUDIO CHAT SOFIA ===');
+        Log::info('Timestamp: ' . now()->toISOString());
+        Log::info('IP: ' . $request->ip());
+        Log::info('User-Agent: ' . $request->userAgent());
+        
+        // Log do usuário autenticado (se disponível)
+        $usuario = $request->get('usuario_autenticado');
+        if ($usuario) {
+            Log::info('Usuário autenticado: ' . $usuario->nome . ' (' . $usuario->email . ')');
+        } else {
+            Log::warning('Requisição de áudio sem usuário autenticado');
+        }
         
         // Validação mais flexível para áudio
         if (!$request->hasFile('audio')) {
@@ -195,6 +236,12 @@ class ChatController extends Controller
         }
 
         $arquivoAudio = $request->file('audio');
+        
+        Log::info('Arquivo de áudio recebido:');
+        Log::info('- Nome original: ' . $arquivoAudio->getClientOriginalName());
+        Log::info('- Tamanho: ' . $arquivoAudio->getSize() . ' bytes');
+        Log::info('- MIME Type: ' . $arquivoAudio->getMimeType());
+        Log::info('- Extensão: ' . $arquivoAudio->getClientOriginalExtension());
         
         // Verificar se é um arquivo válido
         if (!$arquivoAudio->isValid()) {

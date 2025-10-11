@@ -20,15 +20,25 @@ class ServicoChatService
     public function processarMensagemChat(string $mensagemUsuario, ?array $historicoConversa = null): array
     {
         Log::info('=== PROCESSANDO MENSAGEM CHAT SOFIA ===');
+        Log::info('Timestamp: ' . now()->toISOString());
         Log::info('Mensagem: ' . $mensagemUsuario);
+        Log::info('Tamanho da mensagem: ' . strlen($mensagemUsuario) . ' caracteres');
         Log::info('Histórico: ' . json_encode($historicoConversa));
+        Log::info('Quantidade de mensagens no histórico: ' . (is_array($historicoConversa) ? count($historicoConversa) : 0));
         
         try {
+            $inicioProcessamento = microtime(true);
+            
             $promptPersonalizado = $this->criarPromptSOFIA($mensagemUsuario, $historicoConversa);
             Log::info('Prompt criado: ' . substr($promptPersonalizado, 0, 200) . '...');
+            Log::info('Tamanho do prompt: ' . strlen($promptPersonalizado) . ' caracteres');
             
             $resposta = $this->servicoOpenAI->processarPergunta($promptPersonalizado);
-            Log::info('Resposta OpenAI recebida: ' . substr($resposta['resposta'], 0, 200) . '...');
+            $tempoProcessamento = microtime(true) - $inicioProcessamento;
+            
+            Log::info('Resposta recebida da OpenAI em ' . round($tempoProcessamento, 3) . ' segundos');
+            Log::info('Resposta: ' . substr($resposta['resposta'], 0, 200) . '...');
+            Log::info('Tamanho da resposta: ' . strlen($resposta['resposta']) . ' caracteres');
             
             return [
                 'sucesso' => true,
@@ -394,6 +404,34 @@ Responda como a SOFIA, sendo útil, empática e sempre lembrando que você é um
             return [
                 'sucesso' => false,
                 'erro' => 'Erro interno ao processar imagem',
+                'timestamp' => now()->toISOString()
+            ];
+        }
+    }
+
+    /**
+     * Testa conectividade com OpenAI
+     */
+    public function testarConexao(): array
+    {
+        Log::info('=== TESTE DE CONECTIVIDADE SOFIA ===');
+        
+        try {
+            $resposta = $this->servicoOpenAI->processarPergunta('Teste de conectividade');
+            
+            return [
+                'sucesso' => true,
+                'mensagem' => 'SOFIA está online e funcionando',
+                'timestamp' => now()->toISOString(),
+                'resposta_teste' => substr($resposta['resposta'], 0, 100) . '...'
+            ];
+            
+        } catch (\Exception $e) {
+            Log::error('Erro no teste de conectividade: ' . $e->getMessage());
+            
+            return [
+                'sucesso' => false,
+                'erro' => 'SOFIA está offline',
                 'timestamp' => now()->toISOString()
             ];
         }
