@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AnaliseIAController;
+use App\Http\Controllers\Api\ChatController;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,6 +19,28 @@ use App\Http\Controllers\Api\AnaliseIAController;
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
+
+// ========================================
+// ROTAS DO CHAT SOFIA
+// ========================================
+
+// Processar mensagem do chat
+Route::post('/chat/mensagem', [ChatController::class, 'processarMensagem']);
+
+// Analisar intenção da mensagem
+Route::post('/chat/analisar-intencao', [ChatController::class, 'analisarIntencao']);
+
+// Obter sugestões de próximos passos
+Route::post('/chat/sugestoes', [ChatController::class, 'obterSugestoes']);
+
+// Validar mensagem antes do envio
+Route::post('/chat/validar-mensagem', [ChatController::class, 'validarMensagem']);
+
+// Informações sobre a SOFIA
+Route::get('/chat/info-sofia', [ChatController::class, 'obterInfoSofia']);
+
+// Teste de conectividade do chat
+Route::get('/chat/teste-conexao', [ChatController::class, 'testarConexaoChat']);
 
 // ========================================
 // ROTAS DE INTEGRAÇÃO COM IA (GPT)

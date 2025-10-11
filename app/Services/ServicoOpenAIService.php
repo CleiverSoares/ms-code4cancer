@@ -21,8 +21,12 @@ class ServicoOpenAIService
      */
     public function processarPergunta(string $pergunta): array
     {
+        Log::info('=== PROCESSANDO PERGUNTA OPENAI ===');
+        Log::info('Pergunta: ' . substr($pergunta, 0, 200) . '...');
+        
         try {
             $resposta = $this->enviarRequisicaoGPT($pergunta);
+            Log::info('Resposta GPT recebida com sucesso: ' . substr($resposta, 0, 200) . '...');
             
             return [
                 'sucesso' => true,
@@ -32,6 +36,7 @@ class ServicoOpenAIService
             ];
         } catch (\Exception $e) {
             Log::error('Erro ao processar pergunta GPT: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
             
             return [
                 'sucesso' => false,
@@ -77,14 +82,17 @@ class ServicoOpenAIService
      */
     private function enviarRequisicaoGPT(string $prompt): string
     {
+        Log::info('=== ENVIANDO REQUISIÇÃO PARA OPENAI ===');
+        Log::info('API Key configurada: ' . (empty($this->apiKey) ? 'NÃO' : 'SIM'));
+        Log::info('Modelo: ' . $this->modelo);
+        Log::info('URL: ' . $this->baseUrl . '/chat/completions');
+        
         if (empty($this->apiKey)) {
+            Log::error('Chave da API OpenAI não configurada');
             throw new \Exception('Chave da API OpenAI não configurada');
         }
 
-        $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $this->apiKey,
-            'Content-Type' => 'application/json',
-        ])->post($this->baseUrl . '/chat/completions', [
+        $payload = [
             'model' => $this->modelo,
             'messages' => [
                 [
@@ -98,14 +106,32 @@ class ServicoOpenAIService
             ],
             'max_tokens' => 1000,
             'temperature' => 0.7
-        ]);
+        ];
+        
+        Log::info('Payload da requisição: ' . json_encode($payload));
 
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $this->apiKey,
+            'Content-Type' => 'application/json',
+        ])->withOptions([
+            'verify' => false, // Desabilitar verificação SSL em desenvolvimento
+        ])->post($this->baseUrl . '/chat/completions', $payload);
+
+        Log::info('Status da resposta: ' . $response->status());
+        Log::info('Headers da resposta: ' . json_encode($response->headers()));
+        
         if ($response->failed()) {
+            Log::error('Erro na API OpenAI: ' . $response->body());
             throw new \Exception('Erro na API OpenAI: ' . $response->body());
         }
 
         $data = $response->json();
-        return $data['choices'][0]['message']['content'] ?? 'Resposta não disponível';
+        Log::info('Resposta completa da OpenAI: ' . json_encode($data));
+        
+        $resposta = $data['choices'][0]['message']['content'] ?? 'Resposta não disponível';
+        Log::info('Resposta extraída: ' . substr($resposta, 0, 200) . '...');
+        
+        return $resposta;
     }
 
     /**
