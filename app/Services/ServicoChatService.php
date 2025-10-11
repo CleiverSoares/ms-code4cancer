@@ -240,4 +240,162 @@ Responda como a SOFIA, sendo útil, empática e sempre lembrando que você é um
             'emergencia_detectada' => false
         ];
     }
+
+    /**
+     * Processa arquivo de áudio usando Whisper da OpenAI
+     */
+    public function processarAudio($arquivoAudio): array
+    {
+        Log::info('=== PROCESSANDO ÁUDIO COM WHISPER ===');
+        Log::info('Arquivo: ' . $arquivoAudio->getClientOriginalName());
+        Log::info('Tamanho: ' . $arquivoAudio->getSize() . ' bytes');
+        
+        try {
+            // Salvar arquivo temporariamente usando move()
+            Log::info('Tentando salvar arquivo de áudio...');
+            Log::info('Nome original: ' . $arquivoAudio->getClientOriginalName());
+            Log::info('Nome temporário: ' . $arquivoAudio->getFilename());
+            Log::info('Caminho temporário: ' . $arquivoAudio->getPathname());
+            
+            // Criar nome único para o arquivo
+            $nomeArquivo = uniqid() . '.' . $arquivoAudio->getClientOriginalExtension();
+            $caminhoDestino = storage_path('app' . DIRECTORY_SEPARATOR . 'temp' . DIRECTORY_SEPARATOR . 'audio' . DIRECTORY_SEPARATOR . $nomeArquivo);
+            
+            Log::info('Caminho destino: ' . $caminhoDestino);
+            
+            // Mover arquivo diretamente
+            $arquivoAudio->move(storage_path('app' . DIRECTORY_SEPARATOR . 'temp' . DIRECTORY_SEPARATOR . 'audio'), $nomeArquivo);
+            Log::info('Arquivo de áudio movido com sucesso');
+            
+            $caminhoCompleto = $caminhoDestino;
+            
+            Log::info('Arquivo salvo em: ' . $caminhoCompleto);
+            Log::info('Arquivo existe: ' . (file_exists($caminhoCompleto) ? 'SIM' : 'NÃO'));
+            Log::info('Tamanho do arquivo: ' . filesize($caminhoCompleto) . ' bytes');
+            
+            // Verificar se arquivo foi salvo corretamente
+            if (!file_exists($caminhoCompleto)) {
+                throw new \Exception("Arquivo não foi salvo corretamente: {$caminhoCompleto}");
+            }
+            
+            // Transcrever áudio usando Whisper
+            $transcricao = $this->servicoOpenAI->transcreverAudio($caminhoCompleto);
+            
+            // Limpar arquivo temporário
+            if (file_exists($caminhoCompleto)) {
+                unlink($caminhoCompleto);
+                Log::info('Arquivo temporário removido: ' . $caminhoCompleto);
+            }
+            
+            if ($transcricao['sucesso']) {
+                // Processar transcrição como mensagem normal
+                $resposta = $this->gerarRespostaContextual($transcricao['texto']);
+                
+                return [
+                    'sucesso' => true,
+                    'tipo_entrada' => 'audio',
+                    'transcricao' => $transcricao['texto'],
+                    'resposta_sofia' => $resposta['resposta_sofia'],
+                    'analise_intencao' => $resposta['analise_intencao'],
+                    'sugestoes_proximos_passos' => $resposta['sugestoes_proximos_passos'],
+                    'timestamp' => now()->toISOString()
+                ];
+            } else {
+                return [
+                    'sucesso' => false,
+                    'erro' => 'Erro ao transcrever áudio: ' . $transcricao['erro'],
+                    'timestamp' => now()->toISOString()
+                ];
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('Erro ao processar áudio: ' . $e->getMessage());
+            
+            return [
+                'sucesso' => false,
+                'erro' => 'Erro interno ao processar áudio',
+                'timestamp' => now()->toISOString()
+            ];
+        }
+    }
+
+    /**
+     * Processa imagem usando GPT-4 Vision da OpenAI
+     */
+    public function processarImagem($arquivoImagem, string $contexto = '', string $tipoAnalise = 'geral'): array
+    {
+        Log::info('=== PROCESSANDO IMAGEM COM GPT-4 VISION ===');
+        Log::info('Arquivo: ' . $arquivoImagem->getClientOriginalName());
+        Log::info('Tamanho: ' . $arquivoImagem->getSize() . ' bytes');
+        Log::info('Contexto: ' . $contexto);
+        Log::info('Tipo de análise: ' . $tipoAnalise);
+        
+        try {
+            // Salvar arquivo temporariamente usando move()
+            Log::info('Tentando salvar arquivo...');
+            Log::info('Nome original: ' . $arquivoImagem->getClientOriginalName());
+            Log::info('Nome temporário: ' . $arquivoImagem->getFilename());
+            Log::info('Caminho temporário: ' . $arquivoImagem->getPathname());
+            
+            // Criar nome único para o arquivo
+            $nomeArquivo = uniqid() . '.' . $arquivoImagem->getClientOriginalExtension();
+            $caminhoDestino = storage_path('app' . DIRECTORY_SEPARATOR . 'temp' . DIRECTORY_SEPARATOR . 'images' . DIRECTORY_SEPARATOR . $nomeArquivo);
+            
+            Log::info('Caminho destino: ' . $caminhoDestino);
+            
+            // Mover arquivo diretamente
+            $arquivoImagem->move(storage_path('app' . DIRECTORY_SEPARATOR . 'temp' . DIRECTORY_SEPARATOR . 'images'), $nomeArquivo);
+            Log::info('Arquivo movido com sucesso');
+            
+            $caminhoCompleto = $caminhoDestino;
+            
+            Log::info('Arquivo salvo em: ' . $caminhoCompleto);
+            Log::info('Storage path: ' . storage_path('app'));
+            Log::info('Arquivo existe antes da verificação: ' . (file_exists($caminhoCompleto) ? 'SIM' : 'NÃO'));
+            
+            // Verificar se arquivo foi salvo corretamente
+            if (!file_exists($caminhoCompleto)) {
+                throw new \Exception("Arquivo não foi salvo corretamente: {$caminhoCompleto}");
+            }
+            
+            Log::info('Arquivo existe: ' . (file_exists($caminhoCompleto) ? 'SIM' : 'NÃO'));
+            Log::info('Tamanho do arquivo: ' . filesize($caminhoCompleto) . ' bytes');
+            
+            // Analisar imagem usando GPT-4 Vision
+            $analise = $this->servicoOpenAI->analisarImagem($caminhoCompleto, $contexto, $tipoAnalise);
+            
+            // Limpar arquivo temporário
+            if (file_exists($caminhoCompleto)) {
+                unlink($caminhoCompleto);
+                Log::info('Arquivo temporário removido: ' . $caminhoCompleto);
+            }
+            
+            if ($analise['sucesso']) {
+                return [
+                    'sucesso' => true,
+                    'tipo_entrada' => 'imagem',
+                    'analise_imagem' => $analise['descricao'],
+                    'resposta_sofia' => $analise['resposta_sofia'],
+                    'recomendacoes' => $analise['recomendacoes'],
+                    'alerta_medico' => $analise['alerta_medico'] ?? null,
+                    'timestamp' => now()->toISOString()
+                ];
+            } else {
+                return [
+                    'sucesso' => false,
+                    'erro' => 'Erro ao analisar imagem: ' . $analise['erro'],
+                    'timestamp' => now()->toISOString()
+                ];
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('Erro ao processar imagem: ' . $e->getMessage());
+            
+            return [
+                'sucesso' => false,
+                'erro' => 'Erro interno ao processar imagem',
+                'timestamp' => now()->toISOString()
+            ];
+        }
+    }
 }

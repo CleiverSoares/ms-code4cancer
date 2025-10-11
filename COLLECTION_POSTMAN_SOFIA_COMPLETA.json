@@ -1,0 +1,417 @@
+{
+  "info": {
+    "name": "Code4Cancer - SOFIA Chat API",
+    "description": "API completa para chat da SOFIA com suporte a texto, áudio e imagem",
+    "version": "2.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "🔍 Status e Conectividade",
+      "item": [
+        {
+          "name": "Status da API",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "status"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Teste Conectividade Chat",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/chat/teste-conexao",
+              "host": ["{{base_url}}"],
+              "path": ["api", "chat", "teste-conexao"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Info SOFIA",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/chat/info-sofia",
+              "host": ["{{base_url}}"],
+              "path": ["api", "chat", "info-sofia"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "💬 Chat com Texto",
+      "item": [
+        {
+          "name": "Enviar Mensagem",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mensagem\": \"Olá SOFIA, tenho algumas dúvidas sobre prevenção do câncer\",\n  \"historico_conversa\": []\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/chat/mensagem",
+              "host": ["{{base_url}}"],
+              "path": ["api", "chat", "mensagem"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Analisar Intenção",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mensagem\": \"Estou com dor no peito e falta de ar\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/chat/analisar-intencao",
+              "host": ["{{base_url}}"],
+              "path": ["api", "chat", "analisar-intencao"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Validar Mensagem",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mensagem\": \"Preciso de ajuda médica urgente\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/chat/validar-mensagem",
+              "host": ["{{base_url}}"],
+              "path": ["api", "chat", "validar-mensagem"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Obter Sugestões",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contexto\": \"Paciente com câncer de mama em tratamento\",\n  \"tipo_sugestao\": \"geral\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/chat/sugestoes",
+              "host": ["{{base_url}}"],
+              "path": ["api", "chat", "sugestoes"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🎤 Chat com Áudio",
+      "item": [
+        {
+          "name": "Processar Áudio (MP3)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "audio",
+                  "type": "file",
+                  "src": "caminho/para/arquivo.mp3"
+                },
+                {
+                  "key": "formato",
+                  "value": "mp3",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/chat/processar-audio",
+              "host": ["{{base_url}}"],
+              "path": ["api", "chat", "processar-audio"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Processar Áudio (WAV)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "audio",
+                  "type": "file",
+                  "src": "caminho/para/arquivo.wav"
+                },
+                {
+                  "key": "formato",
+                  "value": "wav",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/chat/processar-audio",
+              "host": ["{{base_url}}"],
+              "path": ["api", "chat", "processar-audio"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📸 Chat com Imagem",
+      "item": [
+        {
+          "name": "Processar Imagem Geral",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "imagem",
+                  "type": "file",
+                  "src": "caminho/para/imagem.jpg"
+                },
+                {
+                  "key": "contexto",
+                  "value": "Paciente quer saber sobre esta imagem médica",
+                  "type": "text"
+                },
+                {
+                  "key": "tipo_analise",
+                  "value": "geral",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/chat/processar-imagem",
+              "host": ["{{base_url}}"],
+              "path": ["api", "chat", "processar-imagem"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Processar Imagem Médica",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "imagem",
+                  "type": "file",
+                  "src": "caminho/para/exame.jpg"
+                },
+                {
+                  "key": "contexto",
+                  "value": "Exame de ultrassom abdominal - paciente com dor abdominal",
+                  "type": "text"
+                },
+                {
+                  "key": "tipo_analise",
+                  "value": "medica",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/chat/processar-imagem",
+              "host": ["{{base_url}}"],
+              "path": ["api", "chat", "processar-imagem"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Processar Imagem Radiológica",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "imagem",
+                  "type": "file",
+                  "src": "caminho/para/radiografia.jpg"
+                },
+                {
+                  "key": "contexto",
+                  "value": "Radiografia de tórax - paciente com tosse persistente",
+                  "type": "text"
+                },
+                {
+                  "key": "tipo_analise",
+                  "value": "radiologia",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/chat/processar-imagem",
+              "host": ["{{base_url}}"],
+              "path": ["api", "chat", "processar-imagem"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🧠 IA e Análises",
+      "item": [
+        {
+          "name": "Teste Conexão OpenAI",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/teste-conexao",
+              "host": ["{{base_url}}"],
+              "path": ["api", "teste-conexao"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Processar Pergunta Simples",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pergunta\": \"Quais são os principais sintomas do câncer de mama?\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/pergunta",
+              "host": ["{{base_url}}"],
+              "path": ["api", "pergunta"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Analisar Questionário",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"respostas\": {\n    \"dor\": \"moderada\",\n    \"fadiga\": \"alta\",\n    \"ansiedade\": \"baixa\",\n    \"apetite\": \"reduzido\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/analisar-questionario",
+              "host": ["{{base_url}}"],
+              "path": ["api", "analisar-questionario"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Log da requisição",
+          "console.log('Enviando requisição para:', pm.request.url.toString());"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Teste básico de resposta",
+          "pm.test('Status code is 200', function () {",
+          "    pm.response.to.have.status(200);",
+          "});",
+          "",
+          "// Teste de estrutura JSON",
+          "pm.test('Response has JSON body', function () {",
+          "    pm.response.to.be.json;",
+          "});",
+          "",
+          "// Log da resposta",
+          "console.log('Resposta recebida:', pm.response.json());"
+        ]
+      }
+    }
+  ]
+}

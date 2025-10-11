@@ -42,6 +42,12 @@ Route::get('/chat/info-sofia', [ChatController::class, 'obterInfoSofia']);
 // Teste de conectividade do chat
 Route::get('/chat/teste-conexao', [ChatController::class, 'testarConexaoChat']);
 
+// Processar áudio do chat
+Route::post('/chat/processar-audio', [ChatController::class, 'processarAudio']);
+
+// Processar imagem do chat
+Route::post('/chat/processar-imagem', [ChatController::class, 'processarImagem']);
+
 // ========================================
 // ROTAS DE INTEGRAÇÃO COM IA (GPT)
 // ========================================

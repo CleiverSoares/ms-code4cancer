@@ -135,6 +135,155 @@ class ServicoOpenAIService
     }
 
     /**
+     * Transcreve áudio usando Whisper da OpenAI
+     */
+    public function transcreverAudio(string $caminhoArquivo): array
+    {
+        Log::info('=== TRANSCREVENDO ÁUDIO COM WHISPER ===');
+        Log::info('Arquivo: ' . $caminhoArquivo);
+        
+        try {
+            if (empty($this->apiKey)) {
+                Log::error('Chave da API OpenAI não configurada');
+                throw new \Exception('Chave da API OpenAI não configurada');
+            }
+
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $this->apiKey,
+            ])->withOptions([
+                'verify' => false, // Desabilitar verificação SSL em desenvolvimento
+            ])->attach('file', file_get_contents($caminhoArquivo), basename($caminhoArquivo))
+            ->post($this->baseUrl . '/audio/transcriptions', [
+                'model' => 'whisper-1',
+                'language' => 'pt'
+            ]);
+
+            Log::info('Status da resposta Whisper: ' . $response->status());
+            
+            if ($response->failed()) {
+                Log::error('Erro na API Whisper: ' . $response->body());
+                throw new \Exception('Erro na API Whisper: ' . $response->body());
+            }
+
+            $data = $response->json();
+            Log::info('Resposta Whisper: ' . json_encode($data));
+            
+            $texto = $data['text'] ?? 'Transcrição não disponível';
+            Log::info('Texto transcrito: ' . substr($texto, 0, 200) . '...');
+            
+            return [
+                'sucesso' => true,
+                'texto' => $texto,
+                'timestamp' => now()->toISOString()
+            ];
+            
+        } catch (\Exception $e) {
+            Log::error('Erro ao transcrever áudio: ' . $e->getMessage());
+            
+            return [
+                'sucesso' => false,
+                'erro' => $e->getMessage(),
+                'timestamp' => now()->toISOString()
+            ];
+        }
+    }
+
+    /**
+     * Analisa imagem usando GPT-4 Vision da OpenAI
+     */
+    public function analisarImagem(string $caminhoArquivo, string $contexto = '', string $tipoAnalise = 'geral'): array
+    {
+        Log::info('=== ANALISANDO IMAGEM COM GPT-4 VISION ===');
+        Log::info('Arquivo: ' . $caminhoArquivo);
+        Log::info('Contexto: ' . $contexto);
+        Log::info('Tipo de análise: ' . $tipoAnalise);
+        
+        try {
+            if (empty($this->apiKey)) {
+                Log::error('Chave da API OpenAI não configurada');
+                throw new \Exception('Chave da API OpenAI não configurada');
+            }
+
+            // Converter imagem para base64
+            $imagemBase64 = base64_encode(file_get_contents($caminhoArquivo));
+            $mimeType = mime_content_type($caminhoArquivo);
+            
+            Log::info('Imagem convertida para base64: ' . strlen($imagemBase64) . ' caracteres');
+
+            // Criar prompt específico para análise médica
+            $promptSistema = $this->criarPromptAnaliseImagem($tipoAnalise);
+            $promptUsuario = $this->criarPromptUsuarioImagem($contexto);
+
+            $payload = [
+                'model' => 'gpt-4o',
+                'messages' => [
+                    [
+                        'role' => 'system',
+                        'content' => $promptSistema
+                    ],
+                    [
+                        'role' => 'user',
+                        'content' => [
+                            [
+                                'type' => 'text',
+                                'text' => $promptUsuario
+                            ],
+                            [
+                                'type' => 'image_url',
+                                'image_url' => [
+                                    'url' => "data:{$mimeType};base64,{$imagemBase64}"
+                                ]
+                            ]
+                        ]
+                    ]
+                ],
+                'max_tokens' => 1000,
+                'temperature' => 0.3
+            ];
+            
+            Log::info('Payload GPT-4 Vision: ' . json_encode($payload));
+
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $this->apiKey,
+                'Content-Type' => 'application/json',
+            ])->withOptions([
+                'verify' => false, // Desabilitar verificação SSL em desenvolvimento
+            ])->post($this->baseUrl . '/chat/completions', $payload);
+
+            Log::info('Status da resposta GPT-4 Vision: ' . $response->status());
+            
+            if ($response->failed()) {
+                Log::error('Erro na API GPT-4 Vision: ' . $response->body());
+                throw new \Exception('Erro na API GPT-4 Vision: ' . $response->body());
+            }
+
+            $data = $response->json();
+            Log::info('Resposta GPT-4 Vision: ' . json_encode($data));
+            
+            $resposta = $data['choices'][0]['message']['content'] ?? 'Análise não disponível';
+            Log::info('Análise da imagem: ' . substr($resposta, 0, 200) . '...');
+            
+            return [
+                'sucesso' => true,
+                'descricao' => $resposta,
+                'resposta_sofia' => $this->processarRespostaImagem($resposta, $tipoAnalise),
+                'recomendacoes' => $this->gerarRecomendacoesImagem($tipoAnalise),
+                'alerta_medico' => $this->detectarAlertaMedico($resposta),
+                'timestamp' => now()->toISOString()
+            ];
+            
+        } catch (\Exception $e) {
+            Log::error('Erro ao analisar imagem: ' . $e->getMessage());
+            
+            return [
+                'sucesso' => false,
+                'erro' => $e->getMessage(),
+                'timestamp' => now()->toISOString()
+            ];
+        }
+    }
+
+    /**
      * Cria prompt específico para análise de questionário
      */
     private function criarPromptAnalise(array $respostas): string
@@ -229,5 +378,109 @@ Responda de forma clara e objetiva, focando no bem-estar do paciente.";
                 'timestamp' => now()->toISOString()
             ];
         }
+    }
+
+    /**
+     * Cria prompt específico para análise de imagem médica
+     */
+    private function criarPromptAnaliseImagem(string $tipoAnalise): string
+    {
+        $promptBase = "Você é a SOFIA, assistente médica especializada em oncologia. Analise esta imagem com foco em:";
+        
+        switch ($tipoAnalise) {
+            case 'medica':
+                return $promptBase . "
+                - Identificação de estruturas anatômicas
+                - Possíveis alterações ou anormalidades
+                - Sinais que podem indicar problemas de saúde
+                - IMPORTANTE: Não forneça diagnósticos específicos
+                - Sempre recomende consulta médica especializada";
+                
+            case 'radiologia':
+                return $promptBase . "
+                - Análise de imagens radiológicas
+                - Identificação de estruturas normais vs anormais
+                - Possíveis achados que requerem atenção médica
+                - IMPORTANTE: Não interprete exames radiológicos
+                - Sempre oriente para avaliação por radiologista";
+                
+            default:
+                return $promptBase . "
+                - Descrição geral do que você vê
+                - Contexto médico relevante se aplicável
+                - IMPORTANTE: Não forneça diagnósticos
+                - Sempre recomende consulta médica";
+        }
+    }
+
+    /**
+     * Cria prompt do usuário para análise de imagem
+     */
+    private function criarPromptUsuarioImagem(string $contexto): string
+    {
+        $prompt = "Por favor, analise esta imagem";
+        
+        if (!empty($contexto)) {
+            $prompt .= " considerando o seguinte contexto: {$contexto}";
+        }
+        
+        $prompt .= ". Descreva o que você observa e forneça orientações gerais, lembrando sempre de recomendar consulta médica especializada.";
+        
+        return $prompt;
+    }
+
+    /**
+     * Processa resposta da análise de imagem
+     */
+    private function processarRespostaImagem(string $resposta, string $tipoAnalise): string
+    {
+        $prefixo = "Como SOFIA, analisei a imagem e posso compartilhar algumas observações gerais:\n\n";
+        $sufixo = "\n\n⚠️ **IMPORTANTE**: Esta análise é apenas informativa e não substitui a avaliação de um médico especialista. Recomendo fortemente que você consulte um profissional de saúde para uma análise completa e precisa.";
+        
+        return $prefixo . $resposta . $sufixo;
+    }
+
+    /**
+     * Gera recomendações baseadas no tipo de análise
+     */
+    private function gerarRecomendacoesImagem(string $tipoAnalise): array
+    {
+        $recomendacoes = [
+            "Consulte um médico especialista para avaliação completa",
+            "Mantenha acompanhamento médico regular",
+            "Documente suas dúvidas para próxima consulta"
+        ];
+        
+        switch ($tipoAnalise) {
+            case 'medica':
+                $recomendacoes[] = "Considere realizar exames complementares se recomendado pelo médico";
+                break;
+                
+            case 'radiologia':
+                $recomendacoes[] = "Solicite interpretação por radiologista especializado";
+                $recomendacoes[] = "Compare com exames anteriores se disponíveis";
+                break;
+        }
+        
+        return $recomendacoes;
+    }
+
+    /**
+     * Detecta alertas médicos na análise de imagem
+     */
+    private function detectarAlertaMedico(string $resposta): ?string
+    {
+        $palavrasAlerta = [
+            'urgente', 'emergência', 'crítico', 'grave', 'imediato',
+            'anormalidade', 'alteração significativa', 'preocupante'
+        ];
+        
+        foreach ($palavrasAlerta as $palavra) {
+            if (stripos($resposta, $palavra) !== false) {
+                return "⚠️ ALERTA: Detectei informações que podem requerer atenção médica imediata. Por favor, consulte um médico especialista o mais rápido possível.";
+            }
+        }
+        
+        return null;
     }
 }
