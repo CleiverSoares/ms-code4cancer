@@ -32,12 +32,17 @@ class QuestionarioController extends Controller
             $usuario = $request->user();
             
             if (!$usuario) {
-                return response()->json(['erro' => 'Usuário não autenticado'], 401);
+                return response()->json([
+                    'sucesso' => false,
+                    'erro' => 'Usuário não autenticado',
+                    'mensagem' => 'É necessário estar logado para salvar questionário'
+                ], 401);
             }
 
             $dadosFrontend = $request->all();
             
             Log::info("📋 Dados recebidos do frontend para usuário ID: {$usuario->id}");
+            Log::info("📋 Usuário: {$usuario->nome} ({$usuario->email})");
             Log::info("📋 Dados originais: " . json_encode($dadosFrontend));
             
             // Processar e converter dados do frontend
@@ -48,6 +53,11 @@ class QuestionarioController extends Controller
             return response()->json([
                 'sucesso' => true,
                 'mensagem' => 'Questionário salvo com sucesso',
+                'usuario' => [
+                    'id' => $usuario->id,
+                    'nome' => $usuario->nome,
+                    'email' => $usuario->email
+                ],
                 ...$resultado
             ]);
 
@@ -57,6 +67,7 @@ class QuestionarioController extends Controller
             return response()->json([
                 'sucesso' => false,
                 'erro' => 'Erro interno do servidor',
+                'detalhes' => $e->getMessage(),
                 'timestamp' => now()->toISOString()
             ], 500);
         }
