@@ -803,6 +803,14 @@ Route::prefix('admin/noticias')->middleware(['firebase.auth'])->group(function (
                     'usuario_logado' => $usuario ? $usuario->nome : 'Não logado',
                     'timestamp' => now()->toISOString()
                 ]);
-            });
         });
+        
     });
+});
+
+// Rotas administrativas para questionários
+Route::prefix('admin')->middleware('firebase.auth')->group(function () {
+    Route::get('/questionarios', [\App\Http\Controllers\Api\AdminQuestionarioController::class, 'listarQuestionarios']);
+    Route::get('/questionarios/{id}', [\App\Http\Controllers\Api\AdminQuestionarioController::class, 'obterDetalhesQuestionario']);
+    Route::get('/questionarios/exportar/csv', [\App\Http\Controllers\Api\AdminQuestionarioController::class, 'exportarQuestionarios']);
+});

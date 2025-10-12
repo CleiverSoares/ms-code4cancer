@@ -96,6 +96,58 @@ class ServicoOpenAIService
     }
 
     /**
+     * Envia requisição HTTP com retry automático para OpenAI
+     */
+    private function enviarRequisicaoComRetry(array $payload, string $endpoint = '/chat/completions'): array
+    {
+        $maxTentativas = 3;
+        $ultimoErro = null;
+        
+        for ($tentativa = 1; $tentativa <= $maxTentativas; $tentativa++) {
+            try {
+                Log::info("🔄 Tentativa {$tentativa}/{$maxTentativas} de conexão com OpenAI");
+                
+                $response = Http::withHeaders([
+                    'Authorization' => 'Bearer ' . $this->apiKey,
+                    'Content-Type' => 'application/json',
+                ])->withOptions([
+                    'verify' => false, // Desabilitar verificação SSL em desenvolvimento
+                    'timeout' => 60, // Timeout de 60 segundos
+                    'connect_timeout' => 30, // Timeout de conexão de 30 segundos
+                ])->post($this->baseUrl . $endpoint, $payload);
+
+                Log::info('Status da resposta: ' . $response->status());
+                
+                if ($response->successful()) {
+                    $data = $response->json();
+                    Log::info("✅ Sucesso na tentativa {$tentativa}");
+                    return $data;
+                } else {
+                    $ultimoErro = 'Erro HTTP ' . $response->status() . ': ' . $response->body();
+                    Log::warning("⚠️ Tentativa {$tentativa} falhou: {$ultimoErro}");
+                }
+                
+            } catch (\Exception $e) {
+                $ultimoErro = $e->getMessage();
+                Log::warning("⚠️ Tentativa {$tentativa} falhou com exceção: {$ultimoErro}");
+                
+                // Se for erro de conexão (cURL error 35, 28, etc.), aguardar antes de tentar novamente
+                if (strpos($ultimoErro, 'cURL error') !== false || strpos($ultimoErro, 'Connection') !== false) {
+                    if ($tentativa < $maxTentativas) {
+                        $delay = $tentativa * 2; // Delay progressivo: 2s, 4s
+                        Log::info("⏳ Aguardando {$delay} segundos antes da próxima tentativa...");
+                        sleep($delay);
+                    }
+                }
+            }
+        }
+        
+        // Se todas as tentativas falharam, lançar exceção
+        Log::error("❌ Todas as {$maxTentativas} tentativas falharam. Último erro: {$ultimoErro}");
+        throw new \Exception("Falha na conexão com OpenAI após {$maxTentativas} tentativas. Último erro: {$ultimoErro}");
+    }
+
+    /**
      * Envia requisição para API do OpenAI
      */
     private function enviarRequisicaoGPT(string $prompt): string
@@ -128,28 +180,21 @@ class ServicoOpenAIService
         
         Log::info('Payload da requisição: ' . json_encode($payload));
 
-        $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $this->apiKey,
-            'Content-Type' => 'application/json',
-        ])->withOptions([
-            'verify' => false, // Desabilitar verificação SSL em desenvolvimento
-        ])->post($this->baseUrl . '/chat/completions', $payload);
-
-        Log::info('Status da resposta: ' . $response->status());
-        Log::info('Headers da resposta: ' . json_encode($response->headers()));
-        
-        if ($response->failed()) {
-            Log::error('Erro na API OpenAI: ' . $response->body());
-            throw new \Exception('Erro na API OpenAI: ' . $response->body());
+        try {
+            $data = $this->enviarRequisicaoComRetry($payload);
+            $resposta = $data['choices'][0]['message']['content'] ?? 'Resposta não disponível';
+            Log::info('Resposta extraída: ' . substr($resposta, 0, 200) . '...');
+            return $resposta;
+        } catch (\Exception $e) {
+            Log::error('Erro na requisição GPT: ' . $e->getMessage());
+            
+            // Resposta de fallback quando OpenAI não está disponível
+            $respostaFallback = "Desculpe, estou enfrentando problemas de conexão com o serviço de análise. ";
+            $respostaFallback .= "Por favor, tente novamente em alguns minutos ou consulte um profissional de saúde qualificado para uma avaliação mais detalhada.";
+            
+            Log::info("🔄 Retornando resposta de fallback");
+            return $respostaFallback;
         }
-
-        $data = $response->json();
-        Log::info('Resposta completa da OpenAI: ' . json_encode($data));
-        
-        $resposta = $data['choices'][0]['message']['content'] ?? 'Resposta não disponível';
-        Log::info('Resposta extraída: ' . substr($resposta, 0, 200) . '...');
-        
-        return $resposta;
     }
 
     /**
@@ -261,24 +306,18 @@ class ServicoOpenAIService
             
             Log::info('Payload GPT-4 Vision: ' . json_encode($payload));
 
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->apiKey,
-                'Content-Type' => 'application/json',
-            ])->withOptions([
-                'verify' => false, // Desabilitar verificação SSL em desenvolvimento
-            ])->post($this->baseUrl . '/chat/completions', $payload);
-
-            Log::info('Status da resposta GPT-4 Vision: ' . $response->status());
-            
-            if ($response->failed()) {
-                Log::error('Erro na API GPT-4 Vision: ' . $response->body());
-                throw new \Exception('Erro na API GPT-4 Vision: ' . $response->body());
+            try {
+                $data = $this->enviarRequisicaoComRetry($payload);
+                Log::info('Resposta GPT-4 Vision: ' . json_encode($data));
+                
+                $resposta = $data['choices'][0]['message']['content'] ?? 'Análise não disponível';
+            } catch (\Exception $e) {
+                Log::error('Erro na análise de imagem: ' . $e->getMessage());
+                
+                // Resposta de fallback para análise de imagem
+                $resposta = "Desculpe, não foi possível analisar a imagem devido a problemas de conexão. ";
+                $resposta .= "Por favor, tente novamente em alguns minutos ou consulte um profissional de saúde qualificado para uma avaliação mais detalhada.";
             }
-
-            $data = $response->json();
-            Log::info('Resposta GPT-4 Vision: ' . json_encode($data));
-            
-            $resposta = $data['choices'][0]['message']['content'] ?? 'Análise não disponível';
             Log::info('Análise da imagem: ' . substr($resposta, 0, 200) . '...');
             
             return [
@@ -403,32 +442,16 @@ Responda de forma clara e objetiva, focando no bem-estar do paciente.";
      */
     private function criarPromptAnaliseImagem(string $tipoAnalise): string
     {
-        $promptBase = "Você é a SOFIA, assistente médica especializada em oncologia. Analise esta imagem com foco em:";
-        
-        switch ($tipoAnalise) {
-            case 'medica':
-                return $promptBase . "
-                - Identificação de estruturas anatômicas
-                - Possíveis alterações ou anormalidades
-                - Sinais que podem indicar problemas de saúde
-                - IMPORTANTE: Não forneça diagnósticos específicos
-                - Sempre recomende consulta médica especializada";
-                
-            case 'radiologia':
-                return $promptBase . "
-                - Análise de imagens radiológicas
-                - Identificação de estruturas normais vs anormais
-                - Possíveis achados que requerem atenção médica
-                - IMPORTANTE: Não interprete exames radiológicos
-                - Sempre oriente para avaliação por radiologista";
-                
-            default:
-                return $promptBase . "
-                - Descrição geral do que você vê
-                - Contexto médico relevante se aplicável
-                - IMPORTANTE: Não forneça diagnósticos
-                - Sempre recomende consulta médica";
-        }
+        return "Você é um assistente médico especializado em análise de imagens. Sua tarefa é descrever objetivamente o que você observa na imagem fornecida. 
+
+INSTRUÇÕES:
+1. Descreva apenas o que você vê visualmente na imagem
+2. Identifique estruturas, formas, cores e texturas visíveis
+3. Não faça diagnósticos médicos específicos
+4. Sempre recomende consulta com profissional de saúde qualificado
+5. Seja objetivo e descritivo em sua análise
+
+Responda sempre em português brasileiro.";
     }
 
     /**
@@ -436,13 +459,13 @@ Responda de forma clara e objetiva, focando no bem-estar do paciente.";
      */
     private function criarPromptUsuarioImagem(string $contexto): string
     {
-        $prompt = "Por favor, analise esta imagem";
+        $prompt = "Analise esta imagem e descreva objetivamente o que você observa.";
         
         if (!empty($contexto)) {
-            $prompt .= " considerando o seguinte contexto: {$contexto}";
+            $prompt .= " Contexto adicional: {$contexto}";
         }
         
-        $prompt .= ". Descreva o que você observa e forneça orientações gerais, lembrando sempre de recomendar consulta médica especializada.";
+        $prompt .= " Forneça uma descrição detalhada das características visuais da imagem.";
         
         return $prompt;
     }
