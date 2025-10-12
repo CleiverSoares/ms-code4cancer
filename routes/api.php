@@ -219,6 +219,40 @@ Route::post('/teste-salvar-questionario', function (Request $request) {
 })->middleware('firebase.auth');
 
 // Teste público de salvamento (SEM autenticação - temporário)
+// Endpoint para extrair dados automaticamente das mensagens
+Route::post('/extrair-dados-automatico', function (Request $request) {
+    try {
+        $mensagens = $request->input('mensagens', []);
+        
+        if (empty($mensagens)) {
+            return response()->json([
+                'sucesso' => false,
+                'mensagem' => 'Nenhuma mensagem fornecida'
+            ], 400);
+        }
+        
+        $servicoExtracao = new \App\Services\ServicoExtracaoDadosService();
+        $dadosExtraidos = $servicoExtracao->extrairDadosDasMensagens($mensagens);
+        
+        return response()->json([
+            'sucesso' => true,
+            'mensagem' => 'Dados extraídos com sucesso',
+            'dados_extraidos' => $dadosExtraidos
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error('Erro ao extrair dados automaticamente:', [
+            'erro' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return response()->json([
+            'sucesso' => false,
+            'mensagem' => 'Erro ao extrair dados: ' . $e->getMessage()
+        ], 500);
+    }
+});
+
 Route::post('/teste-salvar-publico', function (Request $request) {
     try {
         Log::info("🧪 TESTE PÚBLICO: Dados recebidos do frontend");

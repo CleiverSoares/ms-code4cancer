@@ -36,10 +36,20 @@ class ServicoOpenAIService
             Log::info('Resposta: ' . substr($resposta, 0, 200) . '...');
             Log::info('Tamanho da resposta: ' . strlen($resposta) . ' caracteres');
             
+            // Interceptar resumo e extrair dados automaticamente
+            $dadosExtraidos = [];
+            if ($this->ehResumoFinal($resposta)) {
+                Log::info('🎯 RESUMO FINAL DETECTADO - Extraindo dados automaticamente...');
+                $servicoExtracao = new \App\Services\ServicoExtracaoDadosService();
+                $dadosExtraidos = $servicoExtracao->extrairDadosDoResumo($resposta);
+                Log::info('📊 Dados extraídos do resumo:', $dadosExtraidos);
+            }
+            
             return [
                 'sucesso' => true,
                 'pergunta' => $pergunta,
                 'resposta' => $resposta,
+                'dados_extraidos' => $dadosExtraidos,
                 'timestamp' => now()->toISOString()
             ];
         } catch (\Exception $e) {
@@ -512,5 +522,34 @@ Responda de forma clara e objetiva, focando no bem-estar do paciente.";
         }
         
         return null;
+    }
+
+    /**
+     * Detecta se a resposta é um resumo final
+     */
+    private function ehResumoFinal(string $resposta): bool
+    {
+        $indicadoresResumo = [
+            'relatório de risco',
+            'resumo das respostas',
+            'critérios e raciocínio',
+            'flags de risco',
+            'recomendações',
+            'prioridade de ações',
+            'aviso: este relatório',
+            'não substitui avaliação médica'
+        ];
+        
+        $respostaLower = strtolower($resposta);
+        $contadorIndicadores = 0;
+        
+        foreach ($indicadoresResumo as $indicador) {
+            if (strpos($respostaLower, $indicador) !== false) {
+                $contadorIndicadores++;
+            }
+        }
+        
+        // Se encontrar pelo menos 3 indicadores, provavelmente é um resumo
+        return $contadorIndicadores >= 3;
     }
 }
