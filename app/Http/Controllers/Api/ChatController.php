@@ -290,6 +290,198 @@ class ChatController extends Controller
     }
 
     /**
+     * Endpoint para enviar alerta médico de análise de mídia
+     * POST /api/chat/enviar-alerta-midia
+     */
+    public function enviarAlertaMidia(Request $request): JsonResponse
+    {
+        Log::info('=== ENVIANDO ALERTA MÉDICO DE ANÁLISE DE MÍDIA ===');
+        Log::info('Timestamp: ' . now()->toISOString());
+        Log::info('IP: ' . $request->ip());
+        
+        // Log do usuário autenticado
+        $usuario = $request->get('usuario_autenticado');
+        if ($usuario) {
+            Log::info('Usuário autenticado: ' . $usuario->nome . ' (' . $usuario->email . ')');
+        } else {
+            Log::warning('Requisição de alerta médico sem usuário autenticado');
+        }
+        
+        // Validar dados obrigatórios
+        $dadosValidacao = $request->validate([
+            'dados_analise' => 'required|array',
+            'dados_analise.nome' => 'required|string|max:255',
+            'dados_analise.idade' => 'required|integer|min:1|max:120',
+            'dados_analise.sexo' => 'required|in:M,F',
+            'dados_analise.contexto' => 'required|string',
+            'dados_analise.tipo_entrada' => 'required|in:audio,imagem',
+            'dados_analise.resposta_sofia' => 'required|string',
+            'dados_analise.alerta_medico' => 'nullable|string',
+            'dados_analise.recomendacoes' => 'nullable|array',
+            'dados_analise.timestamp' => 'required|string'
+        ]);
+        
+        Log::info('Dados validados para envio de alerta:', $dadosValidacao);
+        
+        try {
+            // Instanciar serviço de email de alerta
+            $servicoEmailAlerta = new \App\Services\ServicoEmailAlertaMidiaService();
+            
+            // Verificar se deve enviar alerta
+            if (!$servicoEmailAlerta->deveEnviarAlerta($dadosValidacao['dados_analise'])) {
+                Log::info('Critérios para alerta não atendidos');
+                return response()->json([
+                    'sucesso' => false,
+                    'mensagem' => 'Critérios para envio de alerta não foram atendidos',
+                    'motivo' => 'Análise não apresenta sinais críticos'
+                ], 400);
+            }
+            
+            // Enviar alerta
+            $resultadoEnvio = $servicoEmailAlerta->enviarAlertaAnaliseMidia($dadosValidacao['dados_analise']);
+            
+            if ($resultadoEnvio['sucesso']) {
+                Log::info('Alerta médico enviado com sucesso:', $resultadoEnvio);
+                return response()->json([
+                    'sucesso' => true,
+                    'mensagem' => 'Alerta médico enviado com sucesso para órgãos públicos',
+                    'emails_enviados' => $resultadoEnvio['total_enviados'],
+                    'detalhes' => $resultadoEnvio
+                ], 200);
+            } else {
+                Log::error('Erro ao enviar alerta médico:', $resultadoEnvio);
+                return response()->json([
+                    'sucesso' => false,
+                    'mensagem' => 'Erro ao enviar alerta médico',
+                    'erro' => $resultadoEnvio['mensagem'] ?? 'Erro interno'
+                ], 500);
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('Erro ao processar envio de alerta médico: ' . $e->getMessage());
+            return response()->json([
+                'sucesso' => false,
+                'erro' => 'Erro interno ao enviar alerta médico'
+            ], 500);
+        }
+    }
+
+    /**
+     * Endpoint para análise de mídia com dados do usuário
+     * POST /api/chat/analise-midia
+     */
+    public function analisarMidiaComDados(Request $request): JsonResponse
+    {
+        Log::info('=== ANÁLISE DE MÍDIA COM DADOS DO USUÁRIO ===');
+        Log::info('Timestamp: ' . now()->toISOString());
+        Log::info('IP: ' . $request->ip());
+        
+        // Log do usuário autenticado
+        $usuario = $request->get('usuario_autenticado');
+        if ($usuario) {
+            Log::info('Usuário autenticado: ' . $usuario->nome . ' (' . $usuario->email . ')');
+        } else {
+            Log::warning('Requisição de análise de mídia sem usuário autenticado');
+        }
+        
+        // Validar dados obrigatórios
+        $dadosValidacao = $request->validate([
+            'nome' => 'required|string|max:255',
+            'idade' => 'required|integer|min:1|max:120',
+            'sexo' => 'required|in:M,F',
+            'contexto' => 'required|string|in:sintomas,exame,duvida,prevencao,outro',
+            'descricao' => 'nullable|string|max:1000',
+            'tipo_midia' => 'required|in:audio,imagem'
+        ]);
+        
+        Log::info('Dados validados:', $dadosValidacao);
+        
+        try {
+            $tipoMidia = $request->input('tipo_midia');
+            $resultado = null;
+            
+            if ($tipoMidia === 'audio') {
+                // Validar arquivo de áudio
+                if (!$request->hasFile('audio')) {
+                    return response()->json([
+                        'sucesso' => false,
+                        'erro' => 'Nenhum arquivo de áudio foi enviado'
+                    ], 400);
+                }
+                
+                $arquivoAudio = $request->file('audio');
+                
+                // Verificar se é um arquivo válido
+                if (!$arquivoAudio->isValid()) {
+                    return response()->json([
+                        'sucesso' => false,
+                        'erro' => 'Arquivo de áudio inválido'
+                    ], 400);
+                }
+                
+                // Verificar tamanho (10MB max)
+                if ($arquivoAudio->getSize() > 10 * 1024 * 1024) {
+                    return response()->json([
+                        'sucesso' => false,
+                        'erro' => 'Arquivo muito grande. Máximo: 10MB'
+                    ], 400);
+                }
+                
+                Log::info('Processando áudio com dados do usuário...');
+                $resultado = $this->servicoChat->processarAudioComDados($arquivoAudio, $dadosValidacao);
+                
+            } elseif ($tipoMidia === 'imagem') {
+                // Validar arquivo de imagem
+                if (!$request->hasFile('imagem')) {
+                    return response()->json([
+                        'sucesso' => false,
+                        'erro' => 'Nenhum arquivo de imagem foi enviado'
+                    ], 400);
+                }
+                
+                $arquivoImagem = $request->file('imagem');
+                
+                // Verificar se é um arquivo válido
+                if (!$arquivoImagem->isValid()) {
+                    return response()->json([
+                        'sucesso' => false,
+                        'erro' => 'Arquivo de imagem inválido'
+                    ], 400);
+                }
+                
+                // Verificar tamanho (5MB max)
+                if ($arquivoImagem->getSize() > 5 * 1024 * 1024) {
+                    return response()->json([
+                        'sucesso' => false,
+                        'erro' => 'Arquivo muito grande. Máximo: 5MB'
+                    ], 400);
+                }
+                
+                Log::info('Processando imagem com dados do usuário...');
+                $resultado = $this->servicoChat->processarImagemComDados($arquivoImagem, $dadosValidacao);
+            }
+            
+            if ($resultado && $resultado['sucesso']) {
+                Log::info('Análise de mídia concluída com sucesso');
+                return response()->json($resultado, 200);
+            } else {
+                Log::error('Erro na análise de mídia:', $resultado);
+                return response()->json([
+                    'sucesso' => false,
+                    'erro' => $resultado['erro'] ?? 'Erro interno na análise de mídia'
+                ], 500);
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('Erro ao processar análise de mídia: ' . $e->getMessage());
+            return response()->json([
+                'sucesso' => false,
+                'erro' => 'Erro interno ao processar análise de mídia'
+            ], 500);
+        }
+    }
+
+    /**
      * Endpoint para processar imagem do chat
      * POST /api/chat/processar-imagem
      */

@@ -32,6 +32,14 @@ class QuestionarioRepository implements IQuestionarioRepository
     }
 
     /**
+     * Criar novo questionário
+     */
+    public function criar(array $dados): QuestionarioModel
+    {
+        return QuestionarioModel::create($dados);
+    }
+
+    /**
      * Atualizar questionário existente
      */
     public function atualizar(int $usuarioId, array $dados): bool

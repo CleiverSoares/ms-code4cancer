@@ -18,6 +18,11 @@ interface IQuestionarioRepository
     public function salvar(array $dados): QuestionarioModel;
 
     /**
+     * Criar novo questionário
+     */
+    public function criar(array $dados): QuestionarioModel;
+
+    /**
      * Atualizar questionário existente
      */
     public function atualizar(int $usuarioId, array $dados): bool;

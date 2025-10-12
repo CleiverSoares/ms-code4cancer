@@ -157,12 +157,36 @@ class ServicoExtracaoDadosService
         
         Log::info('🔍 Extraindo dados do texto completo:', ['texto' => $textoCompleto]);
         
-        // Detectar nome (não capturar "Encerrar")
+        // Detectar nome (primeira palavra/frase que não seja data, sexo ou "Encerrar")
         if (preg_match('/nome[:\s]+([a-záàâãéèêíìîóòôõúùûç\s]+)/i', $textoCompleto, $matches)) {
             $nome = trim($matches[1]);
             if (!str_contains(strtolower($nome), 'encerrar')) {
                 $dados['nome_completo'] = $nome;
                 Log::info('✅ Nome extraído:', ['nome' => $nome]);
+            }
+        } else {
+            // Tentar extrair nome diretamente do texto (primeira palavra/frase)
+            $palavras = explode(' ', trim($textoCompleto));
+            $nome = '';
+            
+            foreach ($palavras as $palavra) {
+                $palavra = trim($palavra);
+                
+                // Parar se encontrar data, sexo ou "Encerrar"
+                if (preg_match('/^\d{1,2}\/\d{1,2}\/\d{4}$/', $palavra) || 
+                    in_array(strtolower($palavra), ['masculino', 'feminino', 'm', 'f', 'encerrar'])) {
+                    break;
+                }
+                
+                // Adicionar palavra ao nome se não for vazia
+                if (!empty($palavra)) {
+                    $nome .= ($nome ? ' ' : '') . $palavra;
+                }
+            }
+            
+            if (!empty($nome) && strlen($nome) > 2) {
+                $dados['nome_completo'] = $nome;
+                Log::info('✅ Nome extraído diretamente:', ['nome' => $nome]);
             }
         }
         
@@ -175,17 +199,30 @@ class ServicoExtracaoDadosService
             Log::info('✅ Data extraída:', ['data' => $dados['data_nascimento']]);
         }
         
-        // Detectar sexo biológico
+        // Detectar sexo biológico (primeiro método: com "sexo:")
         if (preg_match('/sexo[:\s]+(masculino|feminino|m|f)/i', $textoCompleto, $matches)) {
             $sexo = strtolower($matches[1]);
             $dados['sexo_biologico'] = ($sexo === 'm' || $sexo === 'masculino') ? 'M' : 'F';
             Log::info('✅ Sexo extraído:', ['sexo' => $dados['sexo_biologico']]);
+        } else {
+            // Segundo método: procurar diretamente no texto
+            if (preg_match('/\b(masculino|feminino|m|f)\b/i', $textoCompleto, $matches)) {
+                $sexo = strtolower($matches[1]);
+                $dados['sexo_biologico'] = ($sexo === 'm' || $sexo === 'masculino') ? 'M' : 'F';
+                Log::info('✅ Sexo extraído diretamente:', ['sexo' => $dados['sexo_biologico']]);
+            }
         }
         
-        // Detectar atividade sexual
+        // Detectar atividade sexual (primeiro método: com "atividade sexual:")
         if (preg_match('/atividade[:\s]+sexual[:\s]+(sim|não|s|n)/i', $textoCompleto, $matches)) {
             $dados['atividade_sexual'] = in_array(strtolower($matches[1]), ['sim', 's']);
             Log::info('✅ Atividade sexual extraída:', ['valor' => $dados['atividade_sexual']]);
+        } else {
+            // Segundo método: procurar "Sim" ou "Não" após sexo
+            if (preg_match('/\b(masculino|feminino|m|f)\b\s+(sim|não|s|n)\b/i', $textoCompleto, $matches)) {
+                $dados['atividade_sexual'] = in_array(strtolower($matches[2]), ['sim', 's']);
+                Log::info('✅ Atividade sexual extraída diretamente:', ['valor' => $dados['atividade_sexual']]);
+            }
         }
         
         // Detectar peso
@@ -281,6 +318,116 @@ class ServicoExtracaoDadosService
         $dados['precisa_atendimento_prioritario'] = in_array(true, $sinaisAlerta);
         
         Log::info('📊 Dados extraídos pelo backend:', $dados);
+        
+        return $dados;
+    }
+    
+    /**
+     * Extrai dados do resumo completo da IA e salva o resumo
+     */
+    public function extrairDadosDoResumoCompleto(string $resumoIA): array
+    {
+        Log::info('🔍 Extraindo dados do resumo completo da IA:', ['resumo' => $resumoIA]);
+        
+        $dados = [];
+        
+        // Detectar nome no resumo
+        if (preg_match('/nome[:\s]+completo[:\s]+([a-záàâãéèêíìîóòôõúùûç\s]+)/i', $resumoIA, $matches)) {
+            $nome = trim($matches[1]);
+            if (!str_contains(strtolower($nome), 'encerrar') && strlen($nome) > 2) {
+                $dados['nome_completo'] = $nome;
+                Log::info('✅ Nome extraído do resumo:', ['nome' => $nome]);
+            }
+        }
+        
+        // Detectar data de nascimento
+        if (preg_match('/(\d{1,2})\/(\d{1,2})\/(\d{4})/', $resumoIA, $matches)) {
+            $dia = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+            $mes = str_pad($matches[2], 2, '0', STR_PAD_LEFT);
+            $ano = $matches[3];
+            $dados['data_nascimento'] = "{$ano}-{$mes}-{$dia}";
+            Log::info('✅ Data extraída do resumo:', ['data' => $dados['data_nascimento']]);
+        }
+        
+        // Detectar sexo biológico
+        if (preg_match('/sexo[:\s]+biológico[:\s]+(masculino|feminino|m|f)/i', $resumoIA, $matches)) {
+            $sexo = strtolower($matches[1]);
+            $dados['sexo_biologico'] = ($sexo === 'm' || $sexo === 'masculino') ? 'M' : 'F';
+            Log::info('✅ Sexo extraído do resumo:', ['sexo' => $dados['sexo_biologico']]);
+        }
+        
+        // Detectar atividade sexual
+        if (preg_match('/atividade[:\s]+sexual[:\s]+(sim|não|s|n)/i', $resumoIA, $matches)) {
+            $dados['atividade_sexual'] = in_array(strtolower($matches[1]), ['sim', 's']);
+            Log::info('✅ Atividade sexual extraída do resumo:', ['valor' => $dados['atividade_sexual']]);
+        }
+        
+        // Detectar peso
+        if (preg_match('/peso[:\s]+(\d+(?:[.,]\d+)?)\s*(?:kg)?/i', $resumoIA, $matches)) {
+            $dados['peso_kg'] = (float) str_replace(',', '.', $matches[1]);
+            Log::info('✅ Peso extraído do resumo:', ['peso' => $dados['peso_kg']]);
+        }
+        
+        // Detectar altura
+        if (preg_match('/altura[:\s]+(\d+(?:[.,]\d+)?)\s*(?:cm)?/i', $resumoIA, $matches)) {
+            $dados['altura_cm'] = (float) str_replace(',', '.', $matches[1]);
+            Log::info('✅ Altura extraída do resumo:', ['altura' => $dados['altura_cm']]);
+        }
+        
+        // Detectar cidade
+        if (preg_match('/cidade[:\s]+([a-záàâãéèêíìîóòôõúùûç\s]+)/i', $resumoIA, $matches)) {
+            $cidade = trim($matches[1]);
+            if ($cidade !== 'Não informado' && $cidade !== 'Não aplicável' && strlen($cidade) <= 100) {
+                $dados['cidade'] = $cidade;
+                Log::info('✅ Cidade extraída do resumo:', ['cidade' => $dados['cidade']]);
+            }
+        }
+        
+        // Detectar estado
+        if (preg_match('/estado[:\s]+([a-záàâãéèêíìîóòôõúùûç\s]+)/i', $resumoIA, $matches)) {
+            $estado = trim($matches[1]);
+            // Só aceitar estados válidos de 2 caracteres
+            if ($estado !== 'Não informado' && $estado !== 'Não aplicável' && strlen($estado) === 2) {
+                $dados['estado'] = strtoupper($estado);
+                Log::info('✅ Estado extraído do resumo:', ['estado' => $dados['estado']]);
+            }
+        }
+        
+        // Detectar histórico pessoal de câncer
+        if (preg_match('/teve[:\s]+câncer[:\s]+(sim|não|s|n)/i', $resumoIA, $matches)) {
+            $dados['teve_cancer_pessoal'] = in_array(strtolower($matches[1]), ['sim', 's']);
+            Log::info('✅ Histórico pessoal extraído do resumo:', ['valor' => $dados['teve_cancer_pessoal']]);
+        }
+        
+        // Detectar histórico familiar
+        if (preg_match('/parente[:\s]+primeiro[:\s]+grau[:\s]+(sim|não|s|n)/i', $resumoIA, $matches)) {
+            $dados['parente_1grau_cancer'] = in_array(strtolower($matches[1]), ['sim', 's']);
+            Log::info('✅ Histórico familiar extraído do resumo:', ['valor' => $dados['parente_1grau_cancer']]);
+        }
+        
+        // Detectar tabagismo
+        if (preg_match('/fuma[:\s]+ou[:\s]+já[:\s]+fumou[:\s]+(nunca|ex-fumante|sim)/i', $resumoIA, $matches)) {
+            $dados['status_tabagismo'] = ucfirst($matches[1]);
+            Log::info('✅ Tabagismo extraído do resumo:', ['status' => $dados['status_tabagismo']]);
+        }
+        
+        // Detectar consumo de álcool
+        if (preg_match('/consome[:\s]+álcool[:\s]+(sim|não|s|n)/i', $resumoIA, $matches)) {
+            $dados['consome_alcool'] = in_array(strtolower($matches[1]), ['sim', 's']);
+            Log::info('✅ Consumo de álcool extraído do resumo:', ['valor' => $dados['consome_alcool']]);
+        }
+        
+        // Detectar atividade física
+        if (preg_match('/pratica[:\s]+atividade[:\s]+física[:\s]+(sim|não|s|n)/i', $resumoIA, $matches)) {
+            $dados['pratica_atividade'] = in_array(strtolower($matches[1]), ['sim', 's']);
+            Log::info('✅ Atividade física extraída do resumo:', ['valor' => $dados['pratica_atividade']]);
+        }
+        
+        // Adicionar o resumo completo aos dados
+        $dados['resumo_ia'] = $resumoIA;
+        Log::info('✅ Resumo da IA salvo:', ['tamanho' => strlen($resumoIA)]);
+        
+        Log::info('📊 Dados extraídos do resumo completo:', $dados);
         
         return $dados;
     }

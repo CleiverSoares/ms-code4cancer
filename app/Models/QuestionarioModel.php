@@ -53,6 +53,7 @@ class QuestionarioModel extends Model
         'nodulos_palpaveis',
         'perda_peso_nao_intencional',
         'precisa_atendimento_prioritario',
+        'resumo_ia',
         'email_alerta_enviado'
     ];
 

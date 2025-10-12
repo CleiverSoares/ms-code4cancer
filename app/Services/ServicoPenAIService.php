@@ -72,6 +72,15 @@ class ServicoPenAIService
             // Obter resposta do assistente
             $proximaPergunta = $this->obterRespostaAssistente($threadId);
             
+            // Interceptar resumo e extrair dados automaticamente
+            $dadosExtraidos = [];
+            if ($this->ehResumoFinal($proximaPergunta)) {
+                Log::info('🎯 RESUMO FINAL DETECTADO - Extraindo dados automaticamente...');
+                $servicoExtracao = new \App\Services\ServicoExtracaoDadosService();
+                $dadosExtraidos = $servicoExtracao->extrairDadosDoResumoCompleto($proximaPergunta);
+                Log::info('📊 Dados extraídos do resumo completo:', $dadosExtraidos);
+            }
+            
             Log::info('Resposta processada com sucesso');
             
             return [
@@ -79,6 +88,7 @@ class ServicoPenAIService
                 'thread_id' => $threadId,
                 'resposta_enviada' => $resposta,
                 'proxima_pergunta' => $proximaPergunta,
+                'dados_extraidos' => $dadosExtraidos,
                 'status' => 'resposta_processada',
                 'timestamp' => now()->toISOString()
             ];
@@ -375,5 +385,31 @@ class ServicoPenAIService
         }
         
         return 'Nenhuma resposta encontrada';
+    }
+    
+    /**
+     * Verifica se a resposta é um resumo final
+     */
+    private function ehResumoFinal(string $resposta): bool
+    {
+        $indicadoresResumo = [
+            '### Resumo das Respostas',
+            '### Análise e Flags de Risco',
+            '### Priorização',
+            '### Recomendações Personalizadas',
+            '### Aviso Final',
+            'Este relatório é informativo',
+            'não substitui avaliação médica'
+        ];
+        
+        $contadorIndicadores = 0;
+        foreach ($indicadoresResumo as $indicador) {
+            if (str_contains($resposta, $indicador)) {
+                $contadorIndicadores++;
+            }
+        }
+        
+        // Se encontrar pelo menos 3 indicadores, é um resumo final
+        return $contadorIndicadores >= 3;
     }
 }

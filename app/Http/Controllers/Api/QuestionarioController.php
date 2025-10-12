@@ -83,8 +83,9 @@ class QuestionarioController extends Controller
     {
         $dadosProcessados = [];
         
-        // Mapeamento de campos do frontend para backend
+        // Mapeamento de campos do frontend para backend (incluindo nomes do backend)
         $mapeamentoCampos = [
+            // Nomes do frontend
             'nomeCompleto' => 'nome_completo',
             'dataNascimento' => 'data_nascimento',
             'sexoBiologico' => 'sexo_biologico',
@@ -121,7 +122,46 @@ class QuestionarioController extends Controller
             'tossePersistente' => 'tosse_persistente',
             'nodulosPalpaveis' => 'nodulos_palpaveis',
             'perdaPesoNaoIntencional' => 'perda_peso_nao_intencional',
-            'precisaAtendimentoPrioritario' => 'precisa_atendimento_prioritario'
+            'precisaAtendimentoPrioritario' => 'precisa_atendimento_prioritario',
+            
+            // Nomes do backend (para compatibilidade)
+            'nome_completo' => 'nome_completo',
+            'data_nascimento' => 'data_nascimento',
+            'sexo_biologico' => 'sexo_biologico',
+            'atividade_sexual' => 'atividade_sexual',
+            'peso_kg' => 'peso_kg',
+            'altura_cm' => 'altura_cm',
+            'cidade' => 'cidade',
+            'estado' => 'estado',
+            'teve_cancer_pessoal' => 'teve_cancer_pessoal',
+            'parente_1grau_cancer' => 'parente_1grau_cancer',
+            'tipo_cancer_parente' => 'tipo_cancer_parente',
+            'idade_diagnostico_parente' => 'idade_diagnostico_parente',
+            'status_tabagismo' => 'status_tabagismo',
+            'macos_dia' => 'macos_dia',
+            'anos_fumando' => 'anos_fumando',
+            'consome_alcool' => 'consome_alcool',
+            'pratica_atividade' => 'pratica_atividade',
+            'idade_primeira_menstruacao' => 'idade_primeira_menstruacao',
+            'ja_engravidou' => 'ja_engravidou',
+            'uso_anticoncepcional' => 'uso_anticoncepcional',
+            'fez_papanicolau' => 'fez_papanicolau',
+            'ano_ultimo_papanicolau' => 'ano_ultimo_papanicolau',
+            'fez_mamografia' => 'fez_mamografia',
+            'ano_ultima_mamografia' => 'ano_ultima_mamografia',
+            'hist_fam_mama_ovario' => 'hist_fam_mama_ovario',
+            'fez_rastreamento_prostata' => 'fez_rastreamento_prostata',
+            'deseja_info_prostata' => 'deseja_info_prostata',
+            'mais_de_45_anos' => 'mais_de_45_anos',
+            'parente_1grau_colorretal' => 'parente_1grau_colorretal',
+            'fez_exame_colorretal' => 'fez_exame_colorretal',
+            'ano_ultimo_exame_colorretal' => 'ano_ultimo_exame_colorretal',
+            'sinais_alerta_intestino' => 'sinais_alerta_intestino',
+            'sangramento_anormal' => 'sangramento_anormal',
+            'tosse_persistente' => 'tosse_persistente',
+            'nodulos_palpaveis' => 'nodulos_palpaveis',
+            'perda_peso_nao_intencional' => 'perda_peso_nao_intencional',
+            'precisa_atendimento_prioritario' => 'precisa_atendimento_prioritario'
         ];
 
         foreach ($mapeamentoCampos as $frontend => $backend) {

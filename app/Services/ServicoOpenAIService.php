@@ -41,8 +41,8 @@ class ServicoOpenAIService
             if ($this->ehResumoFinal($resposta)) {
                 Log::info('🎯 RESUMO FINAL DETECTADO - Extraindo dados automaticamente...');
                 $servicoExtracao = new \App\Services\ServicoExtracaoDadosService();
-                $dadosExtraidos = $servicoExtracao->extrairDadosDoResumo($resposta);
-                Log::info('📊 Dados extraídos do resumo:', $dadosExtraidos);
+                $dadosExtraidos = $servicoExtracao->extrairDadosDoResumoCompleto($resposta);
+                Log::info('📊 Dados extraídos do resumo completo:', $dadosExtraidos);
             }
             
             return [

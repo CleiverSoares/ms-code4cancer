@@ -571,6 +571,12 @@ Route::middleware(['firebase.auth'])->group(function () {
     // Processar imagem do chat
     Route::post('/chat/processar-imagem', [ChatController::class, 'processarImagem']);
     
+    // Nova rota para análise de mídia com dados do usuário
+    Route::post('/chat/analise-midia', [ChatController::class, 'analisarMidiaComDados']);
+    
+    // Rota para enviar alerta médico de análise de mídia
+    Route::post('/chat/enviar-alerta-midia', [ChatController::class, 'enviarAlertaMidia']);
+    
     // ========================================
     // ROTAS DE USUÁRIO (PROTEGIDAS)
     // ========================================
@@ -676,6 +682,10 @@ Route::get('/pen-ai/teste-conexao', [PenAIController::class, 'testarConexao']);
 
 // Informações sobre o Pen AI
 Route::get('/pen-ai/info', [PenAIController::class, 'obterInfo']);
+
+// Endpoints para envio de resumos por email
+Route::post('/pen-ai/reenviar-resumo-email/{questionarioId}', [PenAIController::class, 'reenviarResumoEmail']);
+Route::post('/pen-ai/enviar-resumos-lote', [PenAIController::class, 'enviarResumosLote']);
 
 // ========================================
 // ROTAS DE SAÚDE DA API

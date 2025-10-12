@@ -38,9 +38,15 @@ class ServicoQuestionarioService
             $dadosProcessados = $this->calcularCamposDerivados($dadosProcessados);
             Log::info("📋 Campos derivados calculados: " . json_encode($dadosProcessados));
             
-            // Adicionar ID do usuário
-            $dadosProcessados['usuario_id'] = $usuarioId;
-            Log::info("📋 Dados finais para salvar: " . json_encode($dadosProcessados));
+        // Adicionar ID do usuário
+        $dadosProcessados['usuario_id'] = $usuarioId;
+        
+        // Adicionar resumo da IA se disponível
+        if (isset($dadosProcessados['resumo_ia'])) {
+            Log::info("📋 Resumo da IA incluído nos dados finais");
+        }
+        
+        Log::info("📋 Dados finais para salvar: " . json_encode($dadosProcessados));
             
             // Salvar/atualizar no banco (merge com dados existentes)
             $questionario = $this->salvarProgressivamente($usuarioId, $dadosProcessados);
@@ -88,8 +94,9 @@ class ServicoQuestionarioService
     {
         $dadosProcessados = [];
         
-        // Mapear campos do frontend para o banco
+        // Mapear campos do frontend para o banco (incluindo nomes do backend)
         $mapeamentoCampos = [
+            // Nomes do frontend
             'nomeCompleto' => 'nome_completo',
             'dataNascimento' => 'data_nascimento',
             'sexoBiologico' => 'sexo_biologico',
@@ -125,7 +132,47 @@ class ServicoQuestionarioService
             'tossePersistente' => 'tosse_persistente',
             'nodulosPalpaveis' => 'nodulos_palpaveis',
             'perdaPesoNaoIntencional' => 'perda_peso_nao_intencional',
-            'precisaAtendimentoPrioritario' => 'precisa_atendimento_prioritario'
+            'precisaAtendimentoPrioritario' => 'precisa_atendimento_prioritario',
+            'resumoIA' => 'resumo_ia',
+            
+            // Nomes do backend (para compatibilidade)
+            'nome_completo' => 'nome_completo',
+            'data_nascimento' => 'data_nascimento',
+            'sexo_biologico' => 'sexo_biologico',
+            'atividade_sexual' => 'atividade_sexual',
+            'peso_kg' => 'peso_kg',
+            'altura_cm' => 'altura_cm',
+            'cidade' => 'cidade',
+            'estado' => 'estado',
+            'teve_cancer_pessoal' => 'teve_cancer_pessoal',
+            'parente_1grau_cancer' => 'parente_1grau_cancer',
+            'tipo_cancer_parente' => 'tipo_cancer_parente',
+            'idade_diagnostico_parente' => 'idade_diagnostico_parente',
+            'status_tabagismo' => 'status_tabagismo',
+            'macos_dia' => 'macos_dia',
+            'anos_fumando' => 'anos_fumando',
+            'consome_alcool' => 'consome_alcool',
+            'pratica_atividade' => 'pratica_atividade',
+            'idade_primeira_menstruacao' => 'idade_primeira_menstruacao',
+            'ja_engravidou' => 'ja_engravidou',
+            'uso_anticoncepcional' => 'uso_anticoncepcional',
+            'fez_papanicolau' => 'fez_papanicolau',
+            'ano_ultimo_papanicolau' => 'ano_ultimo_papanicolau',
+            'fez_mamografia' => 'fez_mamografia',
+            'ano_ultima_mamografia' => 'ano_ultima_mamografia',
+            'hist_fam_mama_ovario' => 'hist_fam_mama_ovario',
+            'fez_rastreamento_prostata' => 'fez_rastreamento_prostata',
+            'deseja_info_prostata' => 'deseja_info_prostata',
+            'parente_1grau_colorretal' => 'parente_1grau_colorretal',
+            'fez_exame_colorretal' => 'fez_exame_colorretal',
+            'ano_ultimo_exame_colorretal' => 'ano_ultimo_exame_colorretal',
+            'sinais_alerta_intestino' => 'sinais_alerta_intestino',
+            'sangramento_anormal' => 'sangramento_anormal',
+            'tosse_persistente' => 'tosse_persistente',
+            'nodulos_palpaveis' => 'nodulos_palpaveis',
+            'perda_peso_nao_intencional' => 'perda_peso_nao_intencional',
+            'precisa_atendimento_prioritario' => 'precisa_atendimento_prioritario',
+            'resumo_ia' => 'resumo_ia'
         ];
         
         foreach ($mapeamentoCampos as $frontend => $backend) {
@@ -162,7 +209,21 @@ class ServicoQuestionarioService
         $questionarioExistente = $this->questionarioRepository->buscarPorUsuario($usuarioId);
         Log::info("💾 Questionário existente: " . ($questionarioExistente ? "SIM" : "NÃO"));
         
-        if ($questionarioExistente) {
+        // Verificar se há dados significativos para criar novo questionário
+        $dadosSignificativos = array_filter($dadosNovos, function($valor) {
+            return $valor !== null && $valor !== '' && $valor !== false;
+        });
+        
+        if ($questionarioExistente && count($dadosSignificativos) > 1) {
+            Log::info("💾 Criando novo questionário (dados significativos encontrados)");
+            // Criar novo questionário em vez de atualizar
+            $dadosComDefaults = $this->aplicarValoresPadrao($dadosNovos);
+            Log::info("💾 Dados com valores padrão: " . json_encode($dadosComDefaults));
+            
+            $novoQuestionario = $this->questionarioRepository->criar($dadosComDefaults);
+            Log::info("💾 Novo questionário criado: " . json_encode($novoQuestionario->toArray()));
+            return $novoQuestionario;
+        } elseif ($questionarioExistente) {
             Log::info("💾 Atualizando questionário existente ID: {$questionarioExistente->id}");
             // Merge com dados existentes (apenas campos não nulos)
             $dadosAtualizados = [];
@@ -607,7 +668,7 @@ class ServicoQuestionarioService
             'imc' => $questionario->calcularIMC(),
             'categoria_imc' => $this->categorizarIMC($questionario->calcularIMC()),
             'faixa_etaria' => $this->categorizarFaixaEtaria($questionario->calcularIdade()),
-            'tempo_desde_preenchimento' => $questionario->data_preenchimento->diffForHumans()
+            'tempo_desde_preenchimento' => $questionario->data_preenchimento ? $questionario->data_preenchimento->diffForHumans() : 'N/A'
         ];
     }
 

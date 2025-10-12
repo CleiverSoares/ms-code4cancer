@@ -65,6 +65,18 @@ class PenAIController extends Controller
 
         $resultado = $this->servicoPenAI->enviarResposta($threadId, $resposta);
         
+        // Se há dados extraídos (resumo final), salvar no banco
+        if ($resultado['sucesso'] && !empty($resultado['dados_extraidos'])) {
+            Log::info('🎯 DADOS EXTRAÍDOS DETECTADOS - Salvando no banco...');
+            $questionarioSalvo = $this->salvarDadosExtraidos($resultado['dados_extraidos']);
+            
+            // Enviar resumo por email se o questionário foi salvo com sucesso
+            if ($questionarioSalvo && isset($questionarioSalvo['questionario'])) {
+                Log::info('📧 Enviando resumo por email...');
+                $this->enviarResumoPorEmail($questionarioSalvo['questionario']);
+            }
+        }
+        
         Log::info('Resultado do envio: ' . json_encode($resultado));
         
         return response()->json($resultado, $resultado['sucesso'] ? 200 : 500);
@@ -164,6 +176,130 @@ class PenAIController extends Controller
             'sucesso' => true,
             'info' => $info
         ]);
+    }
+    
+    /**
+     * Salva dados extraídos do resumo da IA no banco
+     */
+    private function salvarDadosExtraidos(array $dadosExtraidos): array
+    {
+        try {
+            Log::info('💾 Salvando dados extraídos do resumo da IA:', $dadosExtraidos);
+            
+            // Usar o serviço de questionário para salvar os dados
+            $servicoQuestionario = new \App\Services\ServicoQuestionarioService(
+                new \App\Repositories\QuestionarioRepository(),
+                new \App\Services\ServicoEmailAlertaService()
+            );
+            
+            // Usar usuário padrão (ID 1) para testes
+            $usuarioId = 1;
+            
+            $resultado = $servicoQuestionario->processarQuestionario($usuarioId, $dadosExtraidos);
+            
+            Log::info('✅ Dados extraídos salvos com sucesso:', $resultado);
+            
+            return $resultado;
+            
+        } catch (\Exception $e) {
+            Log::error('❌ Erro ao salvar dados extraídos: ' . $e->getMessage());
+            return [
+                'sucesso' => false,
+                'erro' => $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Enviar resumo por email
+     */
+    private function enviarResumoPorEmail($questionario): void
+    {
+        try {
+            $servicoEmailResumo = new \App\Services\ServicoEmailResumoService();
+            $resultadoEmail = $servicoEmailResumo->enviarResumoPorEmail($questionario);
+            
+            if ($resultadoEmail['sucesso']) {
+                Log::info('✅ Email de resumo enviado com sucesso:', $resultadoEmail);
+            } else {
+                Log::warning('⚠️ Falha ao enviar email de resumo:', $resultadoEmail);
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('❌ Erro ao enviar email de resumo: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Reenviar resumo por email
+     * POST /api/pen-ai/reenviar-resumo-email/{questionarioId}
+     */
+    public function reenviarResumoEmail(Request $request, int $questionarioId): JsonResponse
+    {
+        Log::info('=== REQUISIÇÃO REENVIAR RESUMO POR EMAIL ===');
+        Log::info('Questionário ID: ' . $questionarioId);
+        
+        try {
+            $servicoEmailResumo = new \App\Services\ServicoEmailResumoService();
+            $resultado = $servicoEmailResumo->reenviarResumoPorEmail($questionarioId);
+            
+            Log::info('Resultado do reenvio: ' . json_encode($resultado));
+            
+            return response()->json($resultado, $resultado['sucesso'] ? 200 : 400);
+            
+        } catch (\Exception $e) {
+            Log::error('Erro ao reenviar resumo por email: ' . $e->getMessage());
+            
+            return response()->json([
+                'sucesso' => false,
+                'erro' => 'Erro interno do servidor',
+                'detalhes' => $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Enviar resumos em lote
+     * POST /api/pen-ai/enviar-resumos-lote
+     */
+    public function enviarResumosLote(Request $request): JsonResponse
+    {
+        Log::info('=== REQUISIÇÃO ENVIAR RESUMOS EM LOTE ===');
+        
+        $validator = Validator::make($request->all(), [
+            'questionario_ids' => 'required|array|min:1',
+            'questionario_ids.*' => 'integer|exists:questionarios_rastreamento,id'
+        ]);
+
+        if ($validator->fails()) {
+            Log::warning('Validação falhou: ' . json_encode($validator->errors()));
+            return response()->json([
+                'sucesso' => false,
+                'erro' => 'Dados inválidos',
+                'detalhes' => $validator->errors()
+            ], 400);
+        }
+
+        $questionarioIds = $request->input('questionario_ids');
+        Log::info('IDs dos questionários: ' . json_encode($questionarioIds));
+
+        try {
+            $servicoEmailResumo = new \App\Services\ServicoEmailResumoService();
+            $resultado = $servicoEmailResumo->enviarResumosEmLote($questionarioIds);
+            
+            Log::info('Resultado do envio em lote: ' . json_encode($resultado));
+            
+            return response()->json($resultado, $resultado['sucesso'] ? 200 : 400);
+            
+        } catch (\Exception $e) {
+            Log::error('Erro ao enviar resumos em lote: ' . $e->getMessage());
+            
+            return response()->json([
+                'sucesso' => false,
+                'erro' => 'Erro interno do servidor',
+                'detalhes' => $e->getMessage()
+            ], 500);
+        }
     }
 }
 
