@@ -51,7 +51,9 @@ class QuestionarioModel extends Model
         'sangramento_anormal',
         'tosse_persistente',
         'nodulos_palpaveis',
-        'perda_peso_nao_intencional'
+        'perda_peso_nao_intencional',
+        'precisa_atendimento_prioritario',
+        'email_alerta_enviado'
     ];
 
     protected function casts(): array
@@ -84,7 +86,9 @@ class QuestionarioModel extends Model
             'sangramento_anormal' => 'boolean',
             'tosse_persistente' => 'boolean',
             'nodulos_palpaveis' => 'boolean',
-            'perda_peso_nao_intencional' => 'boolean'
+            'perda_peso_nao_intencional' => 'boolean',
+            'precisa_atendimento_prioritario' => 'boolean',
+            'email_alerta_enviado' => 'datetime'
         ];
     }
 

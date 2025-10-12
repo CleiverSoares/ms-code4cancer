@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\QuestionarioModel;
 use App\Repositories\IQuestionarioRepository;
 use App\Services\ServicoGamificacaoService;
+use App\Services\ServicoEmailAlertaService;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
@@ -12,13 +13,16 @@ class ServicoQuestionarioService
 {
     private IQuestionarioRepository $questionarioRepository;
     private ServicoGamificacaoService $servicoGamificacao;
+    private ServicoEmailAlertaService $servicoEmailAlerta;
 
     public function __construct(
         IQuestionarioRepository $questionarioRepository,
-        ServicoGamificacaoService $servicoGamificacao
+        ServicoGamificacaoService $servicoGamificacao,
+        ServicoEmailAlertaService $servicoEmailAlerta
     ) {
         $this->questionarioRepository = $questionarioRepository;
         $this->servicoGamificacao = $servicoGamificacao;
+        $this->servicoEmailAlerta = $servicoEmailAlerta;
     }
 
     /**
@@ -51,6 +55,9 @@ class ServicoQuestionarioService
             // Registrar atividade de gamificação (pontos por progresso)
             $gamificacao = $this->registrarGamificacaoProgressiva($usuarioId, $questionario, $dadosProcessados);
             
+            // Processar alertas de atendimento prioritário
+            $alertaEmail = $this->servicoEmailAlerta->processarQuestionario($questionario);
+            
             // Calcular progresso do questionário
             $progressoQuestionario = $this->calcularProgressoQuestionario($questionario);
             
@@ -62,6 +69,7 @@ class ServicoQuestionarioService
                 'analise_risco' => $analiseRisco,
                 'recomendacoes' => $recomendacoes,
                 'gamificacao' => $gamificacao,
+                'alerta_email' => $alertaEmail,
                 'progresso_questionario' => $progressoQuestionario,
                 'estatisticas_pessoais' => $this->calcularEstatisticasPessoais($questionario),
                 'proximas_perguntas' => $this->sugerirProximasPerguntas($questionario)
@@ -116,7 +124,8 @@ class ServicoQuestionarioService
             'sangramentoAnormal' => 'sangramento_anormal',
             'tossePersistente' => 'tosse_persistente',
             'nodulosPalpaveis' => 'nodulos_palpaveis',
-            'perdaPesoNaoIntencional' => 'perda_peso_nao_intencional'
+            'perdaPesoNaoIntencional' => 'perda_peso_nao_intencional',
+            'precisaAtendimentoPrioritario' => 'precisa_atendimento_prioritario'
         ];
         
         foreach ($mapeamentoCampos as $frontend => $backend) {

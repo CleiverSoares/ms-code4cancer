@@ -33,10 +33,16 @@ class AppServiceProvider extends ServiceProvider
             \App\Repositories\QuestionarioRepository::class
         );
 
-        $this->app->bind(
-            \App\Services\ServicoQuestionarioService::class,
-            \App\Services\ServicoQuestionarioService::class
-        );
+    $this->app->bind(
+        \App\Services\ServicoQuestionarioService::class,
+        \App\Services\ServicoQuestionarioService::class
+    );
+
+    // Registrar Service de Email de Alerta
+    $this->app->bind(
+        \App\Services\ServicoEmailAlertaService::class,
+        \App\Services\ServicoEmailAlertaService::class
+    );
     }
 
     /**

@@ -387,5 +387,9 @@ Route::prefix('admin/noticias')->middleware(['firebase.auth'])->group(function (
             Route::get('/analise-geografica', [App\Http\Controllers\Api\QuestionarioController::class, 'analiseGeografica']);
             Route::get('/tendencias-temporais', [App\Http\Controllers\Api\QuestionarioController::class, 'tendenciasTemporais']);
             Route::get('/listar', [App\Http\Controllers\Api\QuestionarioController::class, 'listarQuestionarios']);
+            
+            // Rotas de alertas prioritários
+            Route::post('/testar-alerta-prioritario', [App\Http\Controllers\Api\QuestionarioController::class, 'testarAlertaPrioritario']);
+            Route::get('/estatisticas-alertas', [App\Http\Controllers\Api\QuestionarioController::class, 'estatisticasAlertas']);
         });
     });

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\QuestionarioModel;
 use App\Services\ServicoQuestionarioService;
+use App\Services\ServicoEmailAlertaService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -14,10 +15,12 @@ use Carbon\Carbon;
 class QuestionarioController extends Controller
 {
     private ServicoQuestionarioService $servicoQuestionario;
+    private ServicoEmailAlertaService $servicoEmailAlerta;
 
-    public function __construct(ServicoQuestionarioService $servicoQuestionario)
+    public function __construct(ServicoQuestionarioService $servicoQuestionario, ServicoEmailAlertaService $servicoEmailAlerta)
     {
         $this->servicoQuestionario = $servicoQuestionario;
+        $this->servicoEmailAlerta = $servicoEmailAlerta;
     }
 
     /**
@@ -343,6 +346,73 @@ class QuestionarioController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Erro ao listar questionários: ' . $e->getMessage());
+            
+            return response()->json([
+                'sucesso' => false,
+                'erro' => 'Erro interno do servidor'
+            ], 500);
+        }
+    }
+
+    /**
+     * Testar sistema de alertas prioritários
+     */
+    public function testarAlertaPrioritario(Request $request): JsonResponse
+    {
+        try {
+            $usuario = $request->user();
+            
+            if (!$usuario) {
+                return response()->json(['erro' => 'Usuário não autenticado'], 401);
+            }
+
+            // Criar dados de teste com alerta prioritário
+            $dadosTeste = [
+                'nomeCompleto' => 'Teste Usuário Prioritário',
+                'dataNascimento' => '1980-05-15',
+                'sexoBiologico' => 'M',
+                'cidade' => 'São Paulo',
+                'estado' => 'SP',
+                'precisaAtendimentoPrioritario' => true,
+                'sangramentoAnormal' => true,
+                'tossePersistente' => true,
+                'nodulosPalpaveis' => true
+            ];
+
+            $resultado = $this->servicoQuestionario->processarQuestionario($usuario->id, $dadosTeste);
+            
+            return response()->json([
+                'sucesso' => true,
+                'mensagem' => 'Teste de alerta prioritário executado',
+                'resultado' => $resultado
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao testar alerta prioritário: ' . $e->getMessage());
+            
+            return response()->json([
+                'sucesso' => false,
+                'erro' => 'Erro interno do servidor',
+                'detalhes' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obter estatísticas de alertas
+     */
+    public function estatisticasAlertas(): JsonResponse
+    {
+        try {
+            $estatisticas = $this->servicoEmailAlerta->obterEstatisticasAlertas();
+            
+            return response()->json([
+                'sucesso' => true,
+                'estatisticas' => $estatisticas
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao obter estatísticas de alertas: ' . $e->getMessage());
             
             return response()->json([
                 'sucesso' => false,
