@@ -26,6 +26,17 @@ class AppServiceProvider extends ServiceProvider
             \App\Repositories\INoticiaRepository::class,
             \App\Repositories\NoticiaRepository::class
         );
+
+        // Registrar Repository e Service de Questionário
+        $this->app->bind(
+            \App\Repositories\IQuestionarioRepository::class,
+            \App\Repositories\QuestionarioRepository::class
+        );
+
+        $this->app->bind(
+            \App\Services\ServicoQuestionarioService::class,
+            \App\Services\ServicoQuestionarioService::class
+        );
     }
 
     /**

@@ -366,3 +366,26 @@ Route::prefix('admin/noticias')->middleware(['firebase.auth'])->group(function (
     // Limpar notícias antigas
     Route::delete('/limpar-antigas', [App\Http\Controllers\NoticiaController::class, 'limparAntigas']);
 });
+
+    // ========================================
+    // ROTAS DE QUESTIONÁRIOS DE RASTREAMENTO
+    // ========================================
+
+    Route::middleware('firebase.auth')->group(function () {
+        Route::prefix('questionarios')->group(function () {
+            // Rotas básicas
+            Route::post('/', [App\Http\Controllers\Api\QuestionarioController::class, 'salvarQuestionario']);
+            Route::get('/', [App\Http\Controllers\Api\QuestionarioController::class, 'obterQuestionario']);
+            Route::get('/recomendacoes', [App\Http\Controllers\Api\QuestionarioController::class, 'obterRecomendacoes']);
+            Route::get('/estatisticas', [App\Http\Controllers\Api\QuestionarioController::class, 'obterEstatisticas']);
+            
+            // Rotas analíticas para dashboard
+            Route::get('/dashboard', [App\Http\Controllers\Api\QuestionarioController::class, 'dashboardRastreamento']);
+            Route::get('/analise-fatores-risco', [App\Http\Controllers\Api\QuestionarioController::class, 'analiseFatoresRisco']);
+            Route::get('/estatisticas-elegibilidade', [App\Http\Controllers\Api\QuestionarioController::class, 'estatisticasElegibilidade']);
+            Route::get('/relatorio-progresso', [App\Http\Controllers\Api\QuestionarioController::class, 'relatorioProgresso']);
+            Route::get('/analise-geografica', [App\Http\Controllers\Api\QuestionarioController::class, 'analiseGeografica']);
+            Route::get('/tendencias-temporais', [App\Http\Controllers\Api\QuestionarioController::class, 'tendenciasTemporais']);
+            Route::get('/listar', [App\Http\Controllers\Api\QuestionarioController::class, 'listarQuestionarios']);
+        });
+    });
