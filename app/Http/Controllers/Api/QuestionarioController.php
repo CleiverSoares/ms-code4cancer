@@ -37,29 +37,19 @@ class QuestionarioController extends Controller
 
             $dadosFrontend = $request->all();
             
-            // Validar se não é um "Encerrar" ou dados inválidos
-            if ($this->validarDadosQuestionario($dadosFrontend)) {
-                Log::info("📋 Dados válidos recebidos do frontend para usuário ID: {$usuario->id}");
-                Log::info("📋 Dados originais: " . json_encode($dadosFrontend));
-                
-                // Processar e converter dados do frontend
-                $dadosProcessados = $this->processarDadosFrontend($dadosFrontend);
-                
-                $resultado = $this->servicoQuestionario->processarQuestionario($usuario->id, $dadosProcessados);
-                
-                return response()->json([
-                    'sucesso' => true,
-                    'mensagem' => 'Questionário salvo com sucesso',
-                    ...$resultado
-                ]);
-            } else {
-                Log::warning("⚠️ Dados inválidos recebidos do frontend - ignorando");
-                return response()->json([
-                    'sucesso' => false,
-                    'mensagem' => 'Dados inválidos - questionário não processado',
-                    'timestamp' => now()->toISOString()
-                ], 400);
-            }
+            Log::info("📋 Dados recebidos do frontend para usuário ID: {$usuario->id}");
+            Log::info("📋 Dados originais: " . json_encode($dadosFrontend));
+            
+            // Processar e converter dados do frontend
+            $dadosProcessados = $this->processarDadosFrontend($dadosFrontend);
+            
+            $resultado = $this->servicoQuestionario->processarQuestionario($usuario->id, $dadosProcessados);
+            
+            return response()->json([
+                'sucesso' => true,
+                'mensagem' => 'Questionário salvo com sucesso',
+                ...$resultado
+            ]);
 
         } catch (\Exception $e) {
             Log::error('Erro ao salvar questionário: ' . $e->getMessage());
@@ -72,37 +62,6 @@ class QuestionarioController extends Controller
         }
     }
 
-    /**
-     * Validar dados do questionário
-     */
-    private function validarDadosQuestionario(array $dados): bool
-    {
-        // Verificar se é um "Encerrar" ou dados inválidos
-        if (isset($dados['nomeCompleto']) && $dados['nomeCompleto'] === 'Encerrar') {
-            Log::warning("🚫 Tentativa de enviar 'Encerrar' como questionário - bloqueado");
-            return false;
-        }
-
-        // Verificar se tem pelo menos nome válido
-        if (!isset($dados['nomeCompleto']) || empty(trim($dados['nomeCompleto']))) {
-            Log::warning("🚫 Nome completo não fornecido - bloqueado");
-            return false;
-        }
-
-        // Verificar se tem pelo menos data de nascimento
-        if (!isset($dados['dataNascimento']) || empty($dados['dataNascimento'])) {
-            Log::warning("🚫 Data de nascimento não fornecida - bloqueado");
-            return false;
-        }
-
-        // Verificar se tem pelo menos sexo biológico
-        if (!isset($dados['sexoBiologico']) || empty($dados['sexoBiologico'])) {
-            Log::warning("🚫 Sexo biológico não fornecido - bloqueado");
-            return false;
-        }
-
-        return true;
-    }
 
     /**
      * Processar e converter dados do frontend
