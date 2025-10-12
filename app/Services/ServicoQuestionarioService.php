@@ -191,28 +191,21 @@ class ServicoQuestionarioService
     }
 
     /**
-     * Aplicar valores padrão para campos obrigatórios ao criar novo questionário
+     * Processar dados para salvamento - apenas remover campos null
      */
     private function aplicarValoresPadrao(array $dados): array
     {
-        $dadosComDefaults = $dados;
+        $dadosProcessados = $dados;
         
-        // Campos obrigatórios que precisam de valores padrão
-        $valoresPadrao = [
-            'sexo_biologico' => 'O', // Outro como padrão neutro
-            'atividade_sexual' => false, // Padrão conservador
-            'precisa_atendimento_prioritario' => false
-        ];
-        
-        // Aplicar valores padrão apenas se o campo não estiver presente
-        foreach ($valoresPadrao as $campo => $valorPadrao) {
-            if (!isset($dadosComDefaults[$campo]) || $dadosComDefaults[$campo] === null || $dadosComDefaults[$campo] === '') {
-                $dadosComDefaults[$campo] = $valorPadrao;
-                Log::info("🔧 Aplicado valor padrão para {$campo}: {$valorPadrao}");
+        // Remover apenas campos null para evitar problemas no banco
+        foreach ($dadosProcessados as $campo => $valor) {
+            if ($valor === null) {
+                unset($dadosProcessados[$campo]);
+                Log::info("🗑️ Removido campo null: {$campo}");
             }
         }
         
-        return $dadosComDefaults;
+        return $dadosProcessados;
     }
 
     /**

@@ -147,6 +147,157 @@ Route::get('/teste-dashboard', function (Request $request) {
     }
 })->middleware('firebase.auth');
 
+// Teste de salvamento de questionário (temporário para debug)
+Route::post('/teste-salvar-questionario', function (Request $request) {
+    try {
+        Log::info("🧪 TESTE: Dados recebidos do frontend");
+        Log::info("🧪 TESTE: Headers: " . json_encode($request->headers->all()));
+        Log::info("🧪 TESTE: Body: " . json_encode($request->all()));
+        
+        $usuario = $request->user();
+        Log::info("🧪 TESTE: Usuário: " . ($usuario ? "ID {$usuario->id} - {$usuario->nome}" : "NÃO AUTENTICADO"));
+        
+        if (!$usuario) {
+            return response()->json([
+                'sucesso' => false,
+                'erro' => 'Usuário não autenticado',
+                'debug' => 'Token não encontrado ou inválido'
+            ], 401);
+        }
+        
+        $dadosFrontend = $request->all();
+        Log::info("🧪 TESTE: Dados frontend: " . json_encode($dadosFrontend));
+        
+        // Tentar salvar diretamente no banco com valores padrão para campos obrigatórios
+        $questionario = \App\Models\QuestionarioModel::create([
+            'usuario_id' => $usuario->id,
+            'nome_completo' => $dadosFrontend['nomeCompleto'] ?? 'Teste Frontend',
+            'data_nascimento' => $dadosFrontend['dataNascimento'] ?? '1990-01-01',
+            'sexo_biologico' => $dadosFrontend['sexoBiologico'] ?? 'M',
+            'cidade' => $dadosFrontend['cidade'] ?? 'São Paulo',
+            'estado' => $dadosFrontend['estado'] ?? 'SP',
+            'data_preenchimento' => now(),
+            // Campos obrigatórios com valores padrão
+            'atividade_sexual' => $dadosFrontend['atividadeSexual'] ?? false,
+            'teve_cancer_pessoal' => $dadosFrontend['teveCancerPessoal'] ?? false,
+            'parente_1grau_cancer' => $dadosFrontend['parente1GrauCancer'] ?? false,
+            'status_tabagismo' => $dadosFrontend['statusTabagismo'] ?? 'Nunca',
+            'consome_alcool' => $dadosFrontend['consomeAlcool'] ?? false,
+            'pratica_atividade' => $dadosFrontend['praticaAtividade'] ?? false,
+            'mais_de_45_anos' => $dadosFrontend['maisDe45Anos'] ?? false,
+            'precisa_atendimento_prioritario' => $dadosFrontend['precisaAtendimentoPrioritario'] ?? false,
+            'parente_1grau_colorretal' => $dadosFrontend['parente1GrauColorretal'] ?? false,
+            'sinais_alerta_intestino' => $dadosFrontend['sinaisAlertaIntestino'] ?? false,
+            'sangramento_anormal' => $dadosFrontend['sangramentoAnormal'] ?? false,
+            'tosse_persistente' => $dadosFrontend['tossePersistente'] ?? false,
+            'nodulos_palpaveis' => $dadosFrontend['nodulosPalpaveis'] ?? false,
+            'perda_peso_nao_intencional' => $dadosFrontend['perdaPesoNaoIntencional'] ?? false,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+        
+        Log::info("🧪 TESTE: Questionário salvo com ID: {$questionario->id}");
+        
+        return response()->json([
+            'sucesso' => true,
+            'mensagem' => 'Questionário salvo diretamente no banco',
+            'questionario_id' => $questionario->id,
+            'usuario_id' => $usuario->id,
+            'dados_recebidos' => $dadosFrontend
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error("🧪 TESTE: Erro: " . $e->getMessage());
+        Log::error("🧪 TESTE: Stack trace: " . $e->getTraceAsString());
+        
+        return response()->json([
+            'sucesso' => false,
+            'erro' => $e->getMessage(),
+            'debug' => 'Erro ao salvar questionário'
+        ], 500);
+    }
+})->middleware('firebase.auth');
+
+// Teste público de salvamento (SEM autenticação - temporário)
+Route::post('/teste-salvar-publico', function (Request $request) {
+    try {
+        Log::info("🧪 TESTE PÚBLICO: Dados recebidos do frontend");
+        Log::info("🧪 TESTE PÚBLICO: Headers: " . json_encode($request->headers->all()));
+        Log::info("🧪 TESTE PÚBLICO: Body: " . json_encode($request->all()));
+        
+        $dadosFrontend = $request->all();
+        Log::info("🧪 TESTE PÚBLICO: Dados frontend: " . json_encode($dadosFrontend));
+        
+        // Buscar um usuário existente para teste
+        $usuario = \App\Models\UsuarioModel::first();
+        if (!$usuario) {
+            return response()->json([
+                'sucesso' => false,
+                'erro' => 'Nenhum usuário encontrado no banco'
+            ], 400);
+        }
+        
+        Log::info("🧪 TESTE PÚBLICO: Usando usuário ID: {$usuario->id}");
+        
+        // Preparar dados para salvar - apenas campos não nulos
+        $dadosParaSalvar = [
+            'usuario_id' => $usuario->id,
+            'nome_completo' => $dadosFrontend['nomeCompleto'] ?? 'Teste Frontend Público'
+        ];
+        
+        // Adicionar apenas campos que têm valores (não nulos)
+        $camposPermitidos = [
+            'dataNascimento' => 'data_nascimento',
+            'sexoBiologico' => 'sexo_biologico',
+            'cidade' => 'cidade',
+            'estado' => 'estado',
+            'atividadeSexual' => 'atividade_sexual',
+            'teveCancerPessoal' => 'teve_cancer_pessoal',
+            'parente1GrauCancer' => 'parente_1grau_cancer',
+            'statusTabagismo' => 'status_tabagismo',
+            'consomeAlcool' => 'consome_alcool',
+            'praticaAtividade' => 'pratica_atividade',
+            'maisDe45Anos' => 'mais_de_45_anos',
+            'precisaAtendimentoPrioritario' => 'precisa_atendimento_prioritario',
+            'parente1GrauColorretal' => 'parente_1grau_colorretal',
+            'sinaisAlertaIntestino' => 'sinais_alerta_intestino',
+            'sangramentoAnormal' => 'sangramento_anormal',
+            'tossePersistente' => 'tosse_persistente',
+            'nodulosPalpaveis' => 'nodulos_palpaveis',
+            'perdaPesoNaoIntencional' => 'perda_peso_nao_intencional'
+        ];
+        
+        foreach ($camposPermitidos as $frontend => $backend) {
+            if (isset($dadosFrontend[$frontend]) && $dadosFrontend[$frontend] !== null && $dadosFrontend[$frontend] !== '') {
+                $dadosParaSalvar[$backend] = $dadosFrontend[$frontend];
+            }
+        }
+        
+        // Salvar no banco
+        $questionario = \App\Models\QuestionarioModel::create($dadosParaSalvar);
+        
+        Log::info("🧪 TESTE PÚBLICO: Questionário salvo com ID: {$questionario->id}");
+        
+        return response()->json([
+            'sucesso' => true,
+            'mensagem' => 'Questionário salvo diretamente no banco (público)',
+            'questionario_id' => $questionario->id,
+            'usuario_id' => $usuario->id,
+            'dados_recebidos' => $dadosFrontend
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error("🧪 TESTE PÚBLICO: Erro: " . $e->getMessage());
+        Log::error("🧪 TESTE PÚBLICO: Stack trace: " . $e->getTraceAsString());
+        
+        return response()->json([
+            'sucesso' => false,
+            'erro' => $e->getMessage(),
+            'debug' => 'Erro ao salvar questionário público'
+        ], 500);
+    }
+});
+
 // Dashboard público para teste (temporário)
 Route::get('/dashboard-publico', function () {
     try {
