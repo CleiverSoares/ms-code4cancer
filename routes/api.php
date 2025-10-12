@@ -90,6 +90,110 @@ Route::post('/teste-questionario', function (Request $request) {
     ]);
 })->middleware('firebase.auth');
 
+// Teste do endpoint dashboard (temporário)
+Route::get('/teste-dashboard', function (Request $request) {
+    try {
+        $usuario = $request->user();
+        
+        if (!$usuario) {
+            return response()->json(['erro' => 'Usuário não autenticado'], 401);
+        }
+        
+        // Dados simples para teste
+        $dashboard = [
+            'total_questionarios' => \App\Models\QuestionarioModel::count(),
+            'distribuicao_sexo' => [
+                'F' => \App\Models\QuestionarioModel::where('sexo_biologico', 'F')->count(),
+                'M' => \App\Models\QuestionarioModel::where('sexo_biologico', 'M')->count()
+            ],
+            'distribuicao_idade' => [
+                '18-29' => 5,
+                '30-39' => 8,
+                '40-49' => 12,
+                '50-59' => 15,
+                '60+' => 10
+            ],
+            'distribuicao_estado' => [
+                'SP' => 20,
+                'RJ' => 15,
+                'MG' => 10,
+                'RS' => 8,
+                'PR' => 7
+            ],
+            'fatores_risco' => [
+                'tabagismo_ativo' => \App\Models\QuestionarioModel::where('status_tabagismo', 'Sim')->count(),
+                'ex_fumante' => \App\Models\QuestionarioModel::where('status_tabagismo', 'Ex-fumante')->count(),
+                'consome_alcool' => \App\Models\QuestionarioModel::where('consome_alcool', true)->count(),
+                'sedentario' => \App\Models\QuestionarioModel::where('pratica_atividade', false)->count(),
+                'historico_familiar' => \App\Models\QuestionarioModel::where('parente_1grau_cancer', true)->count()
+            ]
+        ];
+        
+        return response()->json([
+            'sucesso' => true,
+            'dashboard' => $dashboard,
+            'usuario' => [
+                'id' => $usuario->id,
+                'nome' => $usuario->nome,
+                'email' => $usuario->email
+            ]
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'sucesso' => false,
+            'erro' => 'Erro interno: ' . $e->getMessage()
+        ], 500);
+    }
+})->middleware('firebase.auth');
+
+// Dashboard público para teste (temporário)
+Route::get('/dashboard-publico', function () {
+    try {
+        // Dados de exemplo para teste
+        $dashboard = [
+            'total_questionarios' => \App\Models\QuestionarioModel::count(),
+            'distribuicao_sexo' => [
+                'F' => \App\Models\QuestionarioModel::where('sexo_biologico', 'F')->count(),
+                'M' => \App\Models\QuestionarioModel::where('sexo_biologico', 'M')->count()
+            ],
+            'distribuicao_idade' => [
+                '18-29' => 5,
+                '30-39' => 8,
+                '40-49' => 12,
+                '50-59' => 15,
+                '60+' => 10
+            ],
+            'distribuicao_estado' => [
+                'SP' => 20,
+                'RJ' => 15,
+                'MG' => 10,
+                'RS' => 8,
+                'PR' => 7
+            ],
+            'fatores_risco' => [
+                'tabagismo_ativo' => \App\Models\QuestionarioModel::where('status_tabagismo', 'Sim')->count(),
+                'ex_fumante' => \App\Models\QuestionarioModel::where('status_tabagismo', 'Ex-fumante')->count(),
+                'consome_alcool' => \App\Models\QuestionarioModel::where('consome_alcool', true)->count(),
+                'sedentario' => \App\Models\QuestionarioModel::where('pratica_atividade', false)->count(),
+                'historico_familiar' => \App\Models\QuestionarioModel::where('parente_1grau_cancer', true)->count()
+            ]
+        ];
+        
+        return response()->json([
+            'sucesso' => true,
+            'dashboard' => $dashboard,
+            'mensagem' => 'Dados carregados com sucesso!'
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'sucesso' => false,
+            'erro' => 'Erro interno: ' . $e->getMessage()
+        ], 500);
+    }
+});
+
 // Informações sobre a SOFIA (público)
 Route::get('/chat/info-sofia', [ChatController::class, 'obterInfoSofia']);
 

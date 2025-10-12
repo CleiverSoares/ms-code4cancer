@@ -179,10 +179,40 @@ class ServicoQuestionarioService
             return $questionarioAtualizado;
         } else {
             Log::info("💾 Criando novo questionário");
-            $novoQuestionario = $this->questionarioRepository->salvar($dadosNovos);
+            
+            // Garantir que campos obrigatórios tenham valores padrão
+            $dadosComDefaults = $this->aplicarValoresPadrao($dadosNovos);
+            Log::info("💾 Dados com valores padrão: " . json_encode($dadosComDefaults));
+            
+            $novoQuestionario = $this->questionarioRepository->salvar($dadosComDefaults);
             Log::info("💾 Novo questionário criado: " . json_encode($novoQuestionario->toArray()));
             return $novoQuestionario;
         }
+    }
+
+    /**
+     * Aplicar valores padrão para campos obrigatórios ao criar novo questionário
+     */
+    private function aplicarValoresPadrao(array $dados): array
+    {
+        $dadosComDefaults = $dados;
+        
+        // Campos obrigatórios que precisam de valores padrão
+        $valoresPadrao = [
+            'sexo_biologico' => 'O', // Outro como padrão neutro
+            'atividade_sexual' => false, // Padrão conservador
+            'precisa_atendimento_prioritario' => false
+        ];
+        
+        // Aplicar valores padrão apenas se o campo não estiver presente
+        foreach ($valoresPadrao as $campo => $valorPadrao) {
+            if (!isset($dadosComDefaults[$campo]) || $dadosComDefaults[$campo] === null || $dadosComDefaults[$campo] === '') {
+                $dadosComDefaults[$campo] = $valorPadrao;
+                Log::info("🔧 Aplicado valor padrão para {$campo}: {$valorPadrao}");
+            }
+        }
+        
+        return $dadosComDefaults;
     }
 
     /**
