@@ -242,11 +242,22 @@ class ServicoExtracaoDadosService
             Log::info('✅ Altura extraída:', ['altura' => $dados['altura_cm']]);
         }
         
-        // Detectar cidade/estado
+        // Detectar cidade/estado (múltiplos formatos)
         if (preg_match('/cidade[:\s]+([a-záàâãéèêíìîóòôõúùûç\s]+)\s*\/\s*([a-záàâãéèêíìîóòôõúùûç\s]+)/i', $textoCompleto, $matches)) {
             $dados['cidade'] = trim($matches[1]);
             $dados['estado'] = trim($matches[2]);
-            Log::info('✅ Cidade/Estado extraídos:', ['cidade' => $dados['cidade'], 'estado' => $dados['estado']]);
+            Log::info('✅ Cidade/Estado extraídos (formato cidade/estado):', ['cidade' => $dados['cidade'], 'estado' => $dados['estado']]);
+        } elseif (preg_match('/([a-záàâãéèêíìîóòôõúùûç\s]+)\s*,\s*([a-záàâãéèêíìîóòôõúùûç\s]+)/i', $textoCompleto, $matches)) {
+            // Formato: "Cidade, Estado" - procurar por padrão cidade, estado
+            $cidade = trim($matches[1]);
+            $estado = trim($matches[2]);
+            
+            // Validar se não são números ou palavras muito curtas
+            if (strlen($cidade) > 2 && strlen($estado) <= 3 && !is_numeric($cidade) && !is_numeric($estado)) {
+                $dados['cidade'] = $cidade;
+                $dados['estado'] = strtoupper($estado);
+                Log::info('✅ Cidade/Estado extraídos (formato cidade, estado):', ['cidade' => $dados['cidade'], 'estado' => $dados['estado']]);
+            }
         }
         
         // Detectar tabagismo
@@ -374,12 +385,14 @@ class ServicoExtracaoDadosService
             Log::info('✅ Altura extraída do resumo:', ['altura' => $dados['altura_cm']]);
         }
         
-        // Detectar cidade
-        if (preg_match('/cidade[:\s]+([a-záàâãéèêíìîóòôõúùûç\s]+)/i', $resumoIA, $matches)) {
+        // Detectar cidade (formato "Cidade / Estado: São Paulo, SP")
+        if (preg_match('/cidade[:\s]+\/?\s*estado[:\s]+([a-záàâãéèêíìîóòôõúùûç\s]+),\s*([a-záàâãéèêíìîóòôõúùûç\s]+)/i', $resumoIA, $matches)) {
             $cidade = trim($matches[1]);
+            $estado = trim($matches[2]);
             if ($cidade !== 'Não informado' && $cidade !== 'Não aplicável' && strlen($cidade) <= 100) {
                 $dados['cidade'] = $cidade;
-                Log::info('✅ Cidade extraída do resumo:', ['cidade' => $dados['cidade']]);
+                $dados['estado'] = strtoupper($estado);
+                Log::info('✅ Cidade/Estado extraídos do resumo:', ['cidade' => $dados['cidade'], 'estado' => $dados['estado']]);
             }
         }
         
@@ -393,8 +406,8 @@ class ServicoExtracaoDadosService
             }
         }
         
-        // Detectar histórico pessoal de câncer
-        if (preg_match('/teve[:\s]+câncer[:\s]+(sim|não|s|n)/i', $resumoIA, $matches)) {
+        // Detectar histórico pessoal de câncer (formato "Já teve algum câncer diagnosticado: Não")
+        if (preg_match('/já[:\s]+teve[:\s]+algum[:\s]+câncer[:\s]+diagnosticado[:\s]+(sim|não|s|n)/i', $resumoIA, $matches)) {
             $dados['teve_cancer_pessoal'] = in_array(strtolower($matches[1]), ['sim', 's']);
             Log::info('✅ Histórico pessoal extraído do resumo:', ['valor' => $dados['teve_cancer_pessoal']]);
         }

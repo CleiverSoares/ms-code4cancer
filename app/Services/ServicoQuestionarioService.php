@@ -38,8 +38,8 @@ class ServicoQuestionarioService
             $dadosProcessados = $this->calcularCamposDerivados($dadosProcessados);
             Log::info("📋 Campos derivados calculados: " . json_encode($dadosProcessados));
             
-        // Adicionar ID do usuário
-        $dadosProcessados['usuario_id'] = $usuarioId;
+            // Adicionar ID do usuário
+            $dadosProcessados['usuario_id'] = $usuarioId;
         
         // Adicionar resumo da IA se disponível
         if (isset($dadosProcessados['resumo_ia'])) {
@@ -215,14 +215,14 @@ class ServicoQuestionarioService
         });
         
         if ($questionarioExistente && count($dadosSignificativos) > 1) {
-            Log::info("💾 Criando novo questionário (dados significativos encontrados)");
-            // Criar novo questionário em vez de atualizar
+            Log::info("💾 Atualizando questionário existente (dados significativos encontrados)");
+            // Atualizar questionário existente em vez de criar novo
             $dadosComDefaults = $this->aplicarValoresPadrao($dadosNovos);
             Log::info("💾 Dados com valores padrão: " . json_encode($dadosComDefaults));
             
-            $novoQuestionario = $this->questionarioRepository->criar($dadosComDefaults);
-            Log::info("💾 Novo questionário criado: " . json_encode($novoQuestionario->toArray()));
-            return $novoQuestionario;
+            $questionarioExistente->update($dadosComDefaults);
+            Log::info("💾 Questionário atualizado: " . json_encode($questionarioExistente->toArray()));
+            return $questionarioExistente;
         } elseif ($questionarioExistente) {
             Log::info("💾 Atualizando questionário existente ID: {$questionarioExistente->id}");
             // Merge com dados existentes (apenas campos não nulos)
