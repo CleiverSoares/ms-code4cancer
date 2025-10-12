@@ -125,7 +125,7 @@ class QuestionarioController extends Controller
         ];
 
         foreach ($mapeamentoCampos as $frontend => $backend) {
-            if (isset($dados[$frontend])) {
+            if (isset($dados[$frontend]) && $dados[$frontend] !== null && $dados[$frontend] !== '') {
                 $valor = $dados[$frontend];
                 
                 // Converter valores específicos
@@ -144,7 +144,7 @@ class QuestionarioController extends Controller
             }
         }
 
-        Log::info("🔄 Dados processados: " . json_encode($dadosProcessados));
+        Log::info("🔄 Dados processados (apenas não nulos): " . json_encode($dadosProcessados));
         return $dadosProcessados;
     }
 
