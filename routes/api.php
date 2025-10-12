@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AnaliseIAController;
 use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\PenAIController;
 
 /*
 |--------------------------------------------------------------------------
@@ -299,6 +300,28 @@ Route::middleware('auth:sanctum')->group(function () {
         return response()->json(['message' => 'Dashboard protegido']);
     });
 });
+
+// ========================================
+// ROTAS DO PEN AI ASSISTANT
+// ========================================
+
+// Iniciar nova conversa com Pen AI
+Route::post('/pen-ai/iniciar-conversa', [PenAIController::class, 'iniciarConversa']);
+
+// Enviar resposta do usuário e obter próxima pergunta
+Route::post('/pen-ai/enviar-resposta', [PenAIController::class, 'enviarResposta']);
+
+// Obter histórico da conversa
+Route::get('/pen-ai/historico/{thread_id}', [PenAIController::class, 'obterHistorico']);
+
+// Finalizar conversa
+Route::post('/pen-ai/finalizar-conversa', [PenAIController::class, 'finalizarConversa']);
+
+// Testar conexão com Pen AI
+Route::get('/pen-ai/teste-conexao', [PenAIController::class, 'testarConexao']);
+
+// Informações sobre o Pen AI
+Route::get('/pen-ai/info', [PenAIController::class, 'obterInfo']);
 
 // ========================================
 // ROTAS DE SAÚDE DA API
