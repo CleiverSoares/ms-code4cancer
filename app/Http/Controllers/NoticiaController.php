@@ -17,20 +17,52 @@ class NoticiaController extends Controller
     }
 
     /**
-     * Listar notícias para o frontend
+     * Listar notícias para o frontend com paginação
      */
     public function listar(Request $request): JsonResponse
     {
         try {
-            $limite = $request->query('limite', 10);
-            $limite = min($limite, 50); // Máximo 50 notícias por requisição
+            $porPagina = (int) $request->query('por_pagina', 10);
+            $porPagina = min($porPagina, 50); // Máximo 50 notícias por página
 
-            $noticias = $this->servicoNoticia->obterNoticiasParaFrontend($limite);
+            // Usar paginação nativa do Laravel
+            $paginator = $this->servicoNoticia->obterNoticiasPaginadas($porPagina);
+
+            // Transformar dados para o frontend
+            $dados = $paginator->map(function ($noticia) {
+                return [
+                    'id' => $noticia->id,
+                    'titulo' => $noticia->titulo,
+                    'resumo' => $noticia->resumo,
+                    'url' => $noticia->url,
+                    'url_imagem' => $noticia->url_imagem,
+                    'alt_imagem' => $noticia->alt_imagem,
+                    'legenda_imagem' => $noticia->legenda_imagem,
+                    'fonte' => $noticia->fonte,
+                    'data_publicacao' => $noticia->data_publicacao->format('d/m/Y H:i'),
+                    'categoria' => $noticia->categoria
+                ];
+            });
 
             return response()->json([
                 'sucesso' => true,
-                'dados' => $noticias,
-                'total' => count($noticias),
+                'dados' => $dados,
+                'paginacao' => [
+                    'pagina_atual' => $paginator->currentPage(),
+                    'por_pagina' => $paginator->perPage(),
+                    'total_registros' => $paginator->total(),
+                    'total_paginas' => $paginator->lastPage(),
+                    'tem_proxima' => $paginator->hasMorePages(),
+                    'tem_anterior' => $paginator->currentPage() > 1,
+                    'proxima_pagina' => $paginator->hasMorePages() ? $paginator->currentPage() + 1 : null,
+                    'pagina_anterior' => $paginator->currentPage() > 1 ? $paginator->currentPage() - 1 : null,
+                    'links' => [
+                        'primeira' => $paginator->url(1),
+                        'ultima' => $paginator->url($paginator->lastPage()),
+                        'proxima' => $paginator->nextPageUrl(),
+                        'anterior' => $paginator->previousPageUrl()
+                    ]
+                ],
                 'mensagem' => 'Notícias recuperadas com sucesso'
             ]);
 

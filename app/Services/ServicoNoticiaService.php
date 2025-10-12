@@ -110,6 +110,14 @@ class ServicoNoticiaService
 
 
     /**
+     * Obter notícias paginadas para o frontend
+     */
+    public function obterNoticiasPaginadas(int $porPagina = 10): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    {
+        return $this->noticiaRepository->buscarComPaginacao($porPagina);
+    }
+
+    /**
      * Obter notícias para o frontend
      */
     public function obterNoticiasParaFrontend(int $limite = 10): array
