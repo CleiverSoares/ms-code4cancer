@@ -25,6 +25,24 @@ Route::get('/user', function (Request $request) {
 // ROTAS PÚBLICAS (SEM AUTENTICAÇÃO)
 // ========================================
 
+// Debug público para questionários (temporário)
+Route::get('/questionarios/debug-publico', function () {
+    $usuarios = \App\Models\UsuarioModel::all(['id', 'nome', 'email', 'firebase_uid']);
+    return response()->json([
+        'sucesso' => true,
+        'total_usuarios' => $usuarios->count(),
+        'usuarios' => $usuarios->map(function($u) {
+            return [
+                'id' => $u->id,
+                'nome' => $u->nome,
+                'email' => $u->email,
+                'firebase_uid' => $u->firebase_uid
+            ];
+        }),
+        'timestamp' => now()->toISOString()
+    ]);
+});
+
 // Informações sobre a SOFIA (público)
 Route::get('/chat/info-sofia', [ChatController::class, 'obterInfoSofia']);
 

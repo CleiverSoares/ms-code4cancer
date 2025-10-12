@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\QuestionarioModel;
 use App\Repositories\IQuestionarioRepository;
-use App\Services\ServicoGamificacaoService;
 use App\Services\ServicoEmailAlertaService;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -12,16 +11,13 @@ use Carbon\Carbon;
 class ServicoQuestionarioService
 {
     private IQuestionarioRepository $questionarioRepository;
-    private ServicoGamificacaoService $servicoGamificacao;
     private ServicoEmailAlertaService $servicoEmailAlerta;
 
     public function __construct(
         IQuestionarioRepository $questionarioRepository,
-        ServicoGamificacaoService $servicoGamificacao,
         ServicoEmailAlertaService $servicoEmailAlerta
     ) {
         $this->questionarioRepository = $questionarioRepository;
-        $this->servicoGamificacao = $servicoGamificacao;
         $this->servicoEmailAlerta = $servicoEmailAlerta;
     }
 
@@ -440,18 +436,8 @@ class ServicoQuestionarioService
                 $pontosExtras += 20;
             }
             
-            $gamificacao = $this->servicoGamificacao->registrarAtividade(
-                $usuarioId,
-                'atualizar_questionario',
-                [
-                    'campos_preenchidos' => $camposPreenchidos,
-                    'tem_sinais_alerta' => $questionario->temSinaisAlerta(),
-                    'pontos_extras' => $pontosExtras,
-                    'progresso' => $this->calcularProgressoQuestionario($questionario)['percentual']
-                ]
-            );
-            
-            return $gamificacao;
+            // Gamificação removida - não há implementação no frontend
+            return ['sucesso' => true, 'mensagem' => 'Questionário atualizado sem gamificação'];
             
         } catch (\Exception $e) {
             Log::warning('Erro ao registrar gamificação progressiva: ' . $e->getMessage());
