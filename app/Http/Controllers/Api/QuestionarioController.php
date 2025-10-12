@@ -37,13 +37,29 @@ class QuestionarioController extends Controller
 
             $dadosFrontend = $request->all();
             
-            $resultado = $this->servicoQuestionario->processarQuestionario($usuario->id, $dadosFrontend);
-            
-            return response()->json([
-                'sucesso' => true,
-                'mensagem' => 'Questionário salvo com sucesso',
-                ...$resultado
-            ]);
+            // Validar se não é um "Encerrar" ou dados inválidos
+            if ($this->validarDadosQuestionario($dadosFrontend)) {
+                Log::info("📋 Dados válidos recebidos do frontend para usuário ID: {$usuario->id}");
+                Log::info("📋 Dados originais: " . json_encode($dadosFrontend));
+                
+                // Processar e converter dados do frontend
+                $dadosProcessados = $this->processarDadosFrontend($dadosFrontend);
+                
+                $resultado = $this->servicoQuestionario->processarQuestionario($usuario->id, $dadosProcessados);
+                
+                return response()->json([
+                    'sucesso' => true,
+                    'mensagem' => 'Questionário salvo com sucesso',
+                    ...$resultado
+                ]);
+            } else {
+                Log::warning("⚠️ Dados inválidos recebidos do frontend - ignorando");
+                return response()->json([
+                    'sucesso' => false,
+                    'mensagem' => 'Dados inválidos - questionário não processado',
+                    'timestamp' => now()->toISOString()
+                ], 400);
+            }
 
         } catch (\Exception $e) {
             Log::error('Erro ao salvar questionário: ' . $e->getMessage());
@@ -54,6 +70,110 @@ class QuestionarioController extends Controller
                 'timestamp' => now()->toISOString()
             ], 500);
         }
+    }
+
+    /**
+     * Validar dados do questionário
+     */
+    private function validarDadosQuestionario(array $dados): bool
+    {
+        // Verificar se é um "Encerrar" ou dados inválidos
+        if (isset($dados['nomeCompleto']) && $dados['nomeCompleto'] === 'Encerrar') {
+            Log::warning("🚫 Tentativa de enviar 'Encerrar' como questionário - bloqueado");
+            return false;
+        }
+
+        // Verificar se tem pelo menos nome válido
+        if (!isset($dados['nomeCompleto']) || empty(trim($dados['nomeCompleto']))) {
+            Log::warning("🚫 Nome completo não fornecido - bloqueado");
+            return false;
+        }
+
+        // Verificar se tem pelo menos data de nascimento
+        if (!isset($dados['dataNascimento']) || empty($dados['dataNascimento'])) {
+            Log::warning("🚫 Data de nascimento não fornecida - bloqueado");
+            return false;
+        }
+
+        // Verificar se tem pelo menos sexo biológico
+        if (!isset($dados['sexoBiologico']) || empty($dados['sexoBiologico'])) {
+            Log::warning("🚫 Sexo biológico não fornecido - bloqueado");
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Processar e converter dados do frontend
+     */
+    private function processarDadosFrontend(array $dados): array
+    {
+        $dadosProcessados = [];
+        
+        // Mapeamento de campos do frontend para backend
+        $mapeamentoCampos = [
+            'nomeCompleto' => 'nome_completo',
+            'dataNascimento' => 'data_nascimento',
+            'sexoBiologico' => 'sexo_biologico',
+            'atividadeSexual' => 'atividade_sexual',
+            'pesoKg' => 'peso_kg',
+            'alturaCm' => 'altura_cm',
+            'cidade' => 'cidade',
+            'estado' => 'estado',
+            'teveCancerPessoal' => 'teve_cancer_pessoal',
+            'parente1GrauCancer' => 'parente_1grau_cancer',
+            'tipoCancerParente' => 'tipo_cancer_parente',
+            'idadeDiagnosticoParente' => 'idade_diagnostico_parente',
+            'statusTabagismo' => 'status_tabagismo',
+            'macosDia' => 'macos_dia',
+            'anosFumando' => 'anos_fumando',
+            'consomeAlcool' => 'consome_alcool',
+            'praticaAtividade' => 'pratica_atividade',
+            'idadePrimeiraMenstruacao' => 'idade_primeira_menstruacao',
+            'jaEngravidou' => 'ja_engravidou',
+            'usoAnticoncepcional' => 'uso_anticoncepcional',
+            'fezPapanicolau' => 'fez_papanicolau',
+            'anoUltimoPapanicolau' => 'ano_ultimo_papanicolau',
+            'fezMamografia' => 'fez_mamografia',
+            'anoUltimaMamografia' => 'ano_ultima_mamografia',
+            'histFamMamaOvario' => 'hist_fam_mama_ovario',
+            'fezRastreamentoProstata' => 'fez_rastreamento_prostata',
+            'desejaInfoProstata' => 'deseja_info_prostata',
+            'maisDe45Anos' => 'mais_de_45_anos',
+            'parente1GrauColorretal' => 'parente_1grau_colorretal',
+            'fezExameColorretal' => 'fez_exame_colorretal',
+            'anoUltimoExameColorretal' => 'ano_ultimo_exame_colorretal',
+            'sinaisAlertaIntestino' => 'sinais_alerta_intestino',
+            'sangramentoAnormal' => 'sangramento_anormal',
+            'tossePersistente' => 'tosse_persistente',
+            'nodulosPalpaveis' => 'nodulos_palpaveis',
+            'perdaPesoNaoIntencional' => 'perda_peso_nao_intencional',
+            'precisaAtendimentoPrioritario' => 'precisa_atendimento_prioritario'
+        ];
+
+        foreach ($mapeamentoCampos as $frontend => $backend) {
+            if (isset($dados[$frontend])) {
+                $valor = $dados[$frontend];
+                
+                // Converter valores específicos
+                if ($frontend === 'dataNascimento' && $valor) {
+                    try {
+                        // Aceitar formato YYYY-MM-DD e converter para Carbon
+                        $dadosProcessados[$backend] = \Carbon\Carbon::createFromFormat('Y-m-d', $valor)->format('Y-m-d');
+                        Log::info("📅 Data convertida: {$valor} → {$dadosProcessados[$backend]}");
+                    } catch (\Exception $e) {
+                        Log::warning("⚠️ Erro ao converter data: {$valor} - {$e->getMessage()}");
+                        $dadosProcessados[$backend] = $valor; // Manter original se erro
+                    }
+                } else {
+                    $dadosProcessados[$backend] = $valor;
+                }
+            }
+        }
+
+        Log::info("🔄 Dados processados: " . json_encode($dadosProcessados));
+        return $dadosProcessados;
     }
 
     /**

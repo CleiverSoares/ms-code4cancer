@@ -391,5 +391,41 @@ Route::prefix('admin/noticias')->middleware(['firebase.auth'])->group(function (
             // Rotas de alertas prioritários
             Route::post('/testar-alerta-prioritario', [App\Http\Controllers\Api\QuestionarioController::class, 'testarAlertaPrioritario']);
             Route::get('/estatisticas-alertas', [App\Http\Controllers\Api\QuestionarioController::class, 'estatisticasAlertas']);
+            
+            // Endpoint de teste para validar dados (sem autenticação para teste)
+            Route::post('/teste-validacao', function (Request $request) {
+                $dados = $request->all();
+                
+                // Simular validação
+                $valido = true;
+                $erros = [];
+                
+                if (isset($dados['nomeCompleto']) && $dados['nomeCompleto'] === 'Encerrar') {
+                    $valido = false;
+                    $erros[] = 'Nome "Encerrar" não é permitido';
+                }
+                
+                if (!isset($dados['nomeCompleto']) || empty(trim($dados['nomeCompleto']))) {
+                    $valido = false;
+                    $erros[] = 'Nome completo é obrigatório';
+                }
+                
+                if (!isset($dados['dataNascimento']) || empty($dados['dataNascimento'])) {
+                    $valido = false;
+                    $erros[] = 'Data de nascimento é obrigatória';
+                }
+                
+                if (!isset($dados['sexoBiologico']) || empty($dados['sexoBiologico'])) {
+                    $valido = false;
+                    $erros[] = 'Sexo biológico é obrigatório';
+                }
+                
+                return response()->json([
+                    'valido' => $valido,
+                    'erros' => $erros,
+                    'dados_recebidos' => $dados,
+                    'timestamp' => now()->toISOString()
+                ]);
+            });
         });
     });
