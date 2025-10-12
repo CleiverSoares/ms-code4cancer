@@ -411,5 +411,34 @@ Route::prefix('admin/noticias')->middleware(['firebase.auth'])->group(function (
                     'timestamp' => now()->toISOString()
                 ]);
             });
+            
+            // Debug de usuários no banco
+            Route::get('/debug-usuarios', function () {
+                $usuarios = \App\Models\UsuarioModel::all(['id', 'nome', 'email', 'firebase_uid']);
+                return response()->json([
+                    'sucesso' => true,
+                    'total_usuarios' => $usuarios->count(),
+                    'usuarios' => $usuarios->map(function($u) {
+                        return [
+                            'id' => $u->id,
+                            'nome' => $u->nome,
+                            'email' => $u->email,
+                            'firebase_uid' => $u->firebase_uid
+                        ];
+                    }),
+                    'timestamp' => now()->toISOString()
+                ]);
+            });
+            
+            // Teste simples de funcionamento
+            Route::get('/teste-simples', function (Request $request) {
+                $usuario = $request->user();
+                return response()->json([
+                    'sucesso' => true,
+                    'mensagem' => 'API funcionando!',
+                    'usuario_logado' => $usuario ? $usuario->nome : 'Não logado',
+                    'timestamp' => now()->toISOString()
+                ]);
+            });
         });
     });
