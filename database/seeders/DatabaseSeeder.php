@@ -19,5 +19,11 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+        
+        // Seeders específicos (comentados para evitar dados fictícios em produção)
+        // $this->call([
+        //     QuestionarioSeeder::class,
+        //     EmailConfigSeeder::class,
+        // ]);
     }
 }

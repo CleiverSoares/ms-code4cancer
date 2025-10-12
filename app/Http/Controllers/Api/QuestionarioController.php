@@ -47,8 +47,10 @@ class QuestionarioController extends Controller
             
             // Processar e converter dados do frontend
             $dadosProcessados = $this->processarDadosFrontend($dadosFrontend);
+            Log::info("📋 Dados processados: " . json_encode($dadosProcessados));
             
             $resultado = $this->servicoQuestionario->processarQuestionario($usuario->id, $dadosProcessados);
+            Log::info("📋 Resultado do processamento: " . json_encode($resultado));
             
             return response()->json([
                 'sucesso' => true,

@@ -32,15 +32,19 @@ class ServicoQuestionarioService
             
             // Validar e processar dados básicos (apenas os enviados)
             $dadosProcessados = $this->processarDadosBasicos($dadosFrontend);
+            Log::info("📋 Dados básicos processados: " . json_encode($dadosProcessados));
             
             // Calcular campos derivados apenas se possível
             $dadosProcessados = $this->calcularCamposDerivados($dadosProcessados);
+            Log::info("📋 Campos derivados calculados: " . json_encode($dadosProcessados));
             
             // Adicionar ID do usuário
             $dadosProcessados['usuario_id'] = $usuarioId;
+            Log::info("📋 Dados finais para salvar: " . json_encode($dadosProcessados));
             
             // Salvar/atualizar no banco (merge com dados existentes)
             $questionario = $this->salvarProgressivamente($usuarioId, $dadosProcessados);
+            Log::info("📋 Questionário salvo no banco: " . json_encode($questionario->toArray()));
             
             // Calcular análise de risco (baseada nos dados disponíveis)
             $analiseRisco = $this->calcularAnaliseRiscoProgressiva($questionario);
@@ -152,9 +156,14 @@ class ServicoQuestionarioService
      */
     private function salvarProgressivamente(int $usuarioId, array $dadosNovos): QuestionarioModel
     {
+        Log::info("💾 Salvando questionário progressivamente para usuário ID: {$usuarioId}");
+        Log::info("💾 Dados novos: " . json_encode($dadosNovos));
+        
         $questionarioExistente = $this->questionarioRepository->buscarPorUsuario($usuarioId);
+        Log::info("💾 Questionário existente: " . ($questionarioExistente ? "SIM" : "NÃO"));
         
         if ($questionarioExistente) {
+            Log::info("💾 Atualizando questionário existente ID: {$questionarioExistente->id}");
             // Merge com dados existentes (apenas campos não nulos)
             $dadosAtualizados = [];
             foreach ($dadosNovos as $campo => $valor) {
@@ -162,12 +171,17 @@ class ServicoQuestionarioService
                     $dadosAtualizados[$campo] = $valor;
                 }
             }
+            Log::info("💾 Dados para atualizar: " . json_encode($dadosAtualizados));
             
             $questionarioExistente->update($dadosAtualizados);
-            return $questionarioExistente->fresh();
+            $questionarioAtualizado = $questionarioExistente->fresh();
+            Log::info("💾 Questionário atualizado: " . json_encode($questionarioAtualizado->toArray()));
+            return $questionarioAtualizado;
         } else {
-            // Criar novo questionário
-            return $this->questionarioRepository->salvar($dadosNovos);
+            Log::info("💾 Criando novo questionário");
+            $novoQuestionario = $this->questionarioRepository->salvar($dadosNovos);
+            Log::info("💾 Novo questionário criado: " . json_encode($novoQuestionario->toArray()));
+            return $novoQuestionario;
         }
     }
 

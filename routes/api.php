@@ -43,6 +43,53 @@ Route::get('/questionarios/debug-publico', function () {
     ]);
 });
 
+// Debug de autenticação (temporário)
+Route::post('/debug-auth', function (Request $request) {
+    $usuario = $request->user();
+    return response()->json([
+        'sucesso' => true,
+        'usuario_autenticado' => $usuario ? true : false,
+        'usuario' => $usuario ? [
+            'id' => $usuario->id,
+            'nome' => $usuario->nome,
+            'email' => $usuario->email,
+            'firebase_uid' => $usuario->firebase_uid
+        ] : null,
+        'headers' => $request->headers->all(),
+        'timestamp' => now()->toISOString()
+    ]);
+})->middleware('firebase.auth');
+
+// Teste simples de salvamento de questionário (temporário)
+Route::post('/teste-questionario', function (Request $request) {
+    $usuario = $request->user();
+    
+    if (!$usuario) {
+        return response()->json(['erro' => 'Usuário não autenticado'], 401);
+    }
+    
+    $dados = $request->all();
+    
+    // Salvar diretamente no banco para teste
+    $questionario = \App\Models\QuestionarioModel::create([
+        'usuario_id' => $usuario->id,
+        'nome_completo' => $dados['nomeCompleto'] ?? 'Teste',
+        'data_nascimento' => $dados['dataNascimento'] ?? '1980-01-01',
+        'sexo_biologico' => $dados['sexoBiologico'] ?? 'M',
+        'data_preenchimento' => now()
+    ]);
+    
+    return response()->json([
+        'sucesso' => true,
+        'questionario_criado' => $questionario->toArray(),
+        'usuario' => [
+            'id' => $usuario->id,
+            'nome' => $usuario->nome,
+            'email' => $usuario->email
+        ]
+    ]);
+})->middleware('firebase.auth');
+
 // Informações sobre a SOFIA (público)
 Route::get('/chat/info-sofia', [ChatController::class, 'obterInfoSofia']);
 
