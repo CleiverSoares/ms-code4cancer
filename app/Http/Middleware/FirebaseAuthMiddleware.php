@@ -62,7 +62,9 @@ class FirebaseAuthMiddleware
             }
             
             // Anexar o usuário autenticado à requisição
-            $request->attributes->add(['usuario_autenticado' => $usuario]);
+            $request->setUserResolver(function () use ($usuario) {
+                return $usuario;
+            });
             Log::info('Usuário local ' . $usuario->id . ' (' . $usuario->email . ') anexado à requisição.');
             
             return $next($request);

@@ -391,5 +391,25 @@ Route::prefix('admin/noticias')->middleware(['firebase.auth'])->group(function (
             // Rotas de alertas prioritários
             Route::post('/testar-alerta-prioritario', [App\Http\Controllers\Api\QuestionarioController::class, 'testarAlertaPrioritario']);
             Route::get('/estatisticas-alertas', [App\Http\Controllers\Api\QuestionarioController::class, 'estatisticasAlertas']);
+            
+            // Debug de autenticação
+            Route::get('/debug-auth', function (Request $request) {
+                $usuario = $request->user();
+                return response()->json([
+                    'sucesso' => true,
+                    'usuario_autenticado' => $usuario ? [
+                        'id' => $usuario->id,
+                        'nome' => $usuario->nome,
+                        'email' => $usuario->email,
+                        'firebase_uid' => $usuario->firebase_uid
+                    ] : null,
+                    'headers' => [
+                        'authorization' => $request->header('Authorization') ? 'Token presente' : 'Token ausente',
+                        'content_type' => $request->header('Content-Type'),
+                        'user_agent' => $request->header('User-Agent')
+                    ],
+                    'timestamp' => now()->toISOString()
+                ]);
+            });
         });
     });
