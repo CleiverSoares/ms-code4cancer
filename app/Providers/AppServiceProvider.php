@@ -16,6 +16,16 @@ class AppServiceProvider extends ServiceProvider
             \App\Repositories\IUsuarioRepository::class,
             \App\Repositories\UsuarioRepository::class
         );
+
+        $this->app->bind(
+            \App\Repositories\IConversaRepository::class,
+            \App\Repositories\ConversaRepository::class
+        );
+
+        $this->app->bind(
+            \App\Repositories\INoticiaRepository::class,
+            \App\Repositories\NoticiaRepository::class
+        );
     }
 
     /**

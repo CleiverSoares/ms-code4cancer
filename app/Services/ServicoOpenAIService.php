@@ -474,6 +474,28 @@ Responda de forma clara e objetiva, focando no bem-estar do paciente.";
     }
 
     /**
+     * Gera resumo de texto usando IA
+     */
+    public function gerarResumo(string $prompt): string
+    {
+        try {
+            Log::info('Gerando resumo com IA', ['tamanho_prompt' => strlen($prompt)]);
+            
+            $resposta = $this->enviarRequisicaoGPT($prompt);
+            
+            Log::info('Resumo gerado com sucesso', ['tamanho_resposta' => strlen($resposta)]);
+            
+            return $resposta;
+            
+        } catch (\Exception $e) {
+            Log::error('Erro ao gerar resumo', ['erro' => $e->getMessage()]);
+            
+            // Fallback: retorna uma versão truncada do texto original
+            return substr($prompt, 0, 150) . '...';
+        }
+    }
+
+    /**
      * Detecta alertas médicos na análise de imagem
      */
     private function detectarAlertaMedico(string $resposta): ?string

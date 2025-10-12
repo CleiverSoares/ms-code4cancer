@@ -33,6 +33,81 @@ Route::get('/chat/teste-conexao', [ChatController::class, 'testarConexaoChat']);
 // Sincronização inicial do Firebase (público - primeira vez)
 Route::post('/usuario/sincronizar-firebase', [App\Http\Controllers\Api\UsuarioController::class, 'sincronizarComFirebase']);
 
+// ========================================
+// ENDPOINTS PARA TOKEN FIREBASE DINÂMICO
+// ========================================
+
+// Salvar token Firebase atual (chamado pelo frontend)
+Route::post('/firebase/salvar-token', function (Request $request) {
+    $token = $request->header('Authorization');
+    if ($token) {
+        $tokenLimpo = str_replace('Bearer ', '', $token);
+        
+        // Salvar token em arquivo temporário
+        $arquivoToken = storage_path('app/temp/firebase_token.json');
+        $diretorio = dirname($arquivoToken);
+        
+        if (!is_dir($diretorio)) {
+            mkdir($diretorio, 0755, true);
+        }
+        
+        $dadosToken = [
+            'token' => $tokenLimpo,
+            'timestamp' => time(),
+            'expires_at' => time() + 3600, // 1 hora
+            'user_id' => $request->input('user_id', 'unknown')
+        ];
+        
+        file_put_contents($arquivoToken, json_encode($dadosToken));
+        
+        Log::info('Token Firebase salvo automaticamente', [
+            'user_id' => $dadosToken['user_id'],
+            'timestamp' => $dadosToken['timestamp']
+        ]);
+        
+        return response()->json([
+            'sucesso' => true,
+            'mensagem' => 'Token salvo com sucesso',
+            'timestamp' => $dadosToken['timestamp']
+        ]);
+    }
+    
+    return response()->json([
+        'sucesso' => false,
+        'erro' => 'Token não fornecido'
+    ], 400);
+});
+
+// Obter token Firebase atual (chamado pelo Postman)
+Route::get('/firebase/obter-token', function () {
+    $arquivoToken = storage_path('app/temp/firebase_token.json');
+    
+    if (!file_exists($arquivoToken)) {
+        return response()->json([
+            'sucesso' => false,
+            'erro' => 'Token não encontrado'
+        ], 404);
+    }
+    
+    $dadosToken = json_decode(file_get_contents($arquivoToken), true);
+    
+    // Verificar se token não expirou
+    if ($dadosToken['expires_at'] < time()) {
+        return response()->json([
+            'sucesso' => false,
+            'erro' => 'Token expirado'
+        ], 410);
+    }
+    
+    return response()->json([
+        'sucesso' => true,
+        'token' => $dadosToken['token'],
+        'timestamp' => $dadosToken['timestamp'],
+        'expires_at' => $dadosToken['expires_at'],
+        'user_id' => $dadosToken['user_id']
+    ]);
+});
+
 // Rota de teste para debugar token Firebase
 Route::post('/teste-token', function (Request $request) {
     Log::info('=== TESTE TOKEN FIREBASE ===');
@@ -162,6 +237,33 @@ Route::middleware(['firebase.auth'])->group(function () {
         Route::get('/perfil', [App\Http\Controllers\Api\UsuarioController::class, 'buscarPerfil']);
     });
     
+    // ========================================
+    // ROTAS DE CONVERSAS (PROTEGIDAS)
+    // ========================================
+    
+    Route::prefix('conversas')->group(function () {
+        // Iniciar nova conversa
+        Route::post('/iniciar', [App\Http\Controllers\Api\ConversaController::class, 'iniciarConversa']);
+        
+        // Buscar conversas do usuário
+        Route::get('/', [App\Http\Controllers\Api\ConversaController::class, 'buscarConversas']);
+        
+        // Buscar conversa específica
+        Route::get('/{id}', [App\Http\Controllers\Api\ConversaController::class, 'buscarConversa']);
+        
+        // Gerar resumo da conversa
+        Route::post('/{id}/resumo', [App\Http\Controllers\Api\ConversaController::class, 'gerarResumo']);
+        
+        // Finalizar conversa com resumo
+        Route::post('/{id}/finalizar', [App\Http\Controllers\Api\ConversaController::class, 'finalizarConversa']);
+        
+        // Obter estatísticas das conversas
+        Route::get('/estatisticas', [App\Http\Controllers\Api\ConversaController::class, 'obterEstatisticas']);
+        
+        // Deletar conversa
+        Route::delete('/{id}', [App\Http\Controllers\Api\ConversaController::class, 'deletarConversa']);
+    });
+    
 });
 
 // ========================================
@@ -218,4 +320,26 @@ Route::get('/status', function () {
         'openai' => 'Configured',
         'timestamp' => now()->toISOString()
     ]);
+});
+
+// ========================================
+// ROTAS DE NOTÍCIAS SOBRE CÂNCER
+// ========================================
+
+// Rotas públicas para notícias
+Route::prefix('noticias')->group(function () {
+    // Listar notícias para o frontend
+    Route::get('/', [App\Http\Controllers\NoticiaController::class, 'listar']);
+    
+    // Obter estatísticas das notícias
+    Route::get('/estatisticas', [App\Http\Controllers\NoticiaController::class, 'estatisticas']);
+});
+
+// Rotas protegidas para administração de notícias
+Route::prefix('admin/noticias')->middleware(['firebase.auth'])->group(function () {
+    // Buscar e processar novas notícias
+    Route::post('/buscar', [App\Http\Controllers\NoticiaController::class, 'buscarNovas']);
+    
+    // Limpar notícias antigas
+    Route::delete('/limpar-antigas', [App\Http\Controllers\NoticiaController::class, 'limparAntigas']);
 });

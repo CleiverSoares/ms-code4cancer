@@ -1,0 +1,1506 @@
+{
+	"info": {
+		"_postman_id": "sofia-code4cancer-completa-automatico",
+		"name": "SOFIA Code4Cancer - Collection Completa Automática",
+		"description": "Collection completa com TODOS os endpoints baseados no api.php e login automático Firebase. Inclui: Chat, Conversas, Usuário, Áudio, Imagem, IA, etc.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// 🔥 Script GLOBAL para buscar token Firebase REAL do backend",
+					"console.log('🔥 [GLOBAL] Buscando token Firebase do backend...');",
+					"",
+					"// Buscar token do endpoint do backend",
+					"pm.sendRequest({",
+					"    url: 'http://localhost:8000/api/firebase/obter-token',",
+					"    method: 'GET',",
+					"    header: {",
+					"        'Content-Type': 'application/json'",
+					"    }",
+					"}, function (err, response) {",
+					"    if (err) {",
+					"        console.log('❌ [GLOBAL] Erro ao buscar token:', err.message);",
+					"        console.log('⚠️ [GLOBAL] Usando token fake como fallback');",
+					"        gerarTokenFake();",
+					"        return;",
+					"    }",
+					"    ",
+					"    try {",
+					"        const data = response.json();",
+					"        if (data.sucesso && data.token) {",
+					"            console.log('✅ [GLOBAL] Token Firebase REAL obtido do backend');",
+					"            pm.globals.set('firebase_token', data.token);",
+					"            console.log('🔑 [GLOBAL] Token real:', data.token.substring(0, 50) + '...');",
+					"            console.log('👤 [GLOBAL] User ID:', data.user_id);",
+					"            console.log('⏰ [GLOBAL] Timestamp:', new Date(data.timestamp * 1000).toLocaleString());",
+					"            console.log('🔄 [GLOBAL] Expira em:', new Date(data.expires_at * 1000).toLocaleString());",
+					"        } else {",
+					"            console.log('⚠️ [GLOBAL] Token não encontrado no backend:', data.erro);",
+					"            console.log('⚠️ [GLOBAL] Usando token fake como fallback');",
+					"            gerarTokenFake();",
+					"        }",
+					"    } catch (e) {",
+					"        console.log('❌ [GLOBAL] Erro ao processar resposta:', e.message);",
+					"        console.log('⚠️ [GLOBAL] Usando token fake como fallback');",
+					"        gerarTokenFake();",
+					"    }",
+					"});",
+					"",
+					"function gerarTokenFake() {",
+					"    console.log('🔧 [GLOBAL] Gerando token fake temporário...');",
+					"",
+					"// Gerar timestamp atual (sempre novo)",
+					"const agora = Math.floor(Date.now() / 1000);",
+					"const expiracao = agora + 3600; // 1 hora",
+					"",
+					"// Dados do usuário (configure aqui seus dados)",
+					"const usuario = {",
+					"    uid: 'oeF1WHsv0WO5tVo1UOKbjxo3xQH2',",
+					"    email: 'projetodoar02@gmail.com',",
+					"    nome: 'projetodoar',",
+					"    foto: 'https://lh3.googleusercontent.com/a/ACg8ocI1lWbRq0GAoG3TgMgjCIB3h4kthcJaT_AT3gDcz_xzG_WZPQ=s96-c'",
+					"};",
+					"",
+					"console.log('👤 [GLOBAL] Usuário:', usuario.email);",
+					"console.log('⏰ [GLOBAL] Timestamp atual:', new Date(agora * 1000).toLocaleString());",
+					"",
+					"// Criar payload do JWT com timestamp dinâmico",
+					"const payload = {",
+					"    iss: 'https://securetoken.google.com/sofia-14f19',",
+					"    aud: 'sofia-14f19',",
+					"    auth_time: agora,",
+					"    user_id: usuario.uid,",
+					"    sub: usuario.uid,",
+					"    iat: agora,",
+					"    exp: expiracao,",
+					"    email: usuario.email,",
+					"    email_verified: true,",
+					"    name: usuario.nome,",
+					"    picture: usuario.foto,",
+					"    firebase: {",
+					"        identities: {",
+					"            'google.com': ['116548262310291424797'],",
+					"            email: [usuario.email]",
+					"        },",
+					"        sign_in_provider: 'google.com'",
+					"    }",
+					"};",
+					"",
+					"// Criar header do JWT",
+					"const header = {",
+					"    alg: 'RS256',",
+					"    kid: 'a5a005e97cb1e427300e52cdd50f0b36cd80629b',",
+					"    typ: 'JWT'",
+					"};",
+					"",
+					"// Função para codificar base64",
+					"function base64UrlEncode(str) {",
+					"    try {",
+					"        return btoa(unescape(encodeURIComponent(str)))",
+					"            .replace(/\\+/g, '-')",
+					"            .replace(/\\//g, '_')",
+					"            .replace(/=/g, '');",
+					"    } catch (e) {",
+					"        console.error('❌ Erro ao codificar base64:', e);",
+					"        return '';",
+					"    }",
+					"}",
+					"",
+					"// Criar JWT com timestamp dinâmico",
+					"const headerEncoded = base64UrlEncode(JSON.stringify(header));",
+					"const payloadEncoded = base64UrlEncode(JSON.stringify(payload));",
+					"const signature = 'global_dynamic_signature_' + agora; // Assinatura global com timestamp dinâmico",
+					"",
+					"const token = `${headerEncoded}.${payloadEncoded}.${signature}`;",
+					"",
+					"console.log('🔑 [GLOBAL] Token DINÂMICO gerado:', token.substring(0, 50) + '...');",
+					"console.log('📏 [GLOBAL] Tamanho:', token.length);",
+					"console.log('⏰ [GLOBAL] Timestamp:', agora);",
+					"console.log('🔄 [GLOBAL] Expira em:', new Date(expiracao * 1000).toLocaleString());",
+					"",
+					"// Salvar token na variável global (sempre atualizado)",
+					"pm.globals.set('firebase_token', token);",
+					"",
+					"// Verificar se foi salvo",
+					"const tokenSalvo = pm.globals.get('firebase_token');",
+					"if (tokenSalvo && tokenSalvo.length > 0) {",
+					"    console.log('✅ [GLOBAL] Token DINÂMICO salvo com sucesso');",
+					"    console.log('🔍 [GLOBAL] Token atual:', tokenSalvo.substring(0, 50) + '...');",
+					"} else {",
+					"    console.log('❌ [GLOBAL] Erro ao salvar token dinâmico');",
+					"}",
+					"",
+					"console.log('🎯 [GLOBAL] Token Firebase DINÂMICO gerado:');",
+					"console.log('UID:', usuario.uid);",
+					"console.log('Email:', usuario.email);",
+					"console.log('Timestamp:', agora);",
+					"console.log('Expira em:', expiracao);"
+				]
+			}
+		}
+	],
+	"item": [
+		{
+			"name": "🔐 Login Automático Firebase",
+			"item": [
+				{
+					"name": "1. Obter Token Firebase (Automático)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// 🔄 Script para gerar token Firebase DINÂMICO a cada requisição",
+									"console.log('🔄 Gerando token Firebase dinâmico...');",
+									"",
+									"// Gerar timestamp atual (sempre novo)",
+									"const agora = Math.floor(Date.now() / 1000);",
+									"const expiracao = agora + 3600; // 1 hora",
+									"",
+									"// Dados do usuário (configure aqui seus dados)",
+									"const usuario = {",
+									"    uid: 'oeF1WHsv0WO5tVo1UOKbjxo3xQH2',",
+									"    email: 'projetodoar02@gmail.com',",
+									"    nome: 'projetodoar',",
+									"    foto: 'https://lh3.googleusercontent.com/a/ACg8ocI1lWbRq0GAoG3TgMgjCIB3h4kthcJaT_AT3gDcz_xzG_WZPQ=s96-c'",
+									"};",
+									"",
+									"console.log('👤 Usuário:', usuario.email);",
+									"console.log('⏰ Timestamp atual:', new Date(agora * 1000).toLocaleString());",
+									"",
+									"// Criar payload do JWT com timestamp dinâmico",
+									"const payload = {",
+									"    iss: 'https://securetoken.google.com/sofia-14f19',",
+									"    aud: 'sofia-14f19',",
+									"    auth_time: agora,",
+									"    user_id: usuario.uid,",
+									"    sub: usuario.uid,",
+									"    iat: agora,",
+									"    exp: expiracao,",
+									"    email: usuario.email,",
+									"    email_verified: true,",
+									"    name: usuario.nome,",
+									"    picture: usuario.foto,",
+									"    firebase: {",
+									"        identities: {",
+									"            'google.com': ['116548262310291424797'],",
+									"            email: [usuario.email]",
+									"        },",
+									"        sign_in_provider: 'google.com'",
+									"    }",
+									"};",
+									"",
+									"// Criar header do JWT",
+									"const header = {",
+									"    alg: 'RS256',",
+									"    kid: 'a5a005e97cb1e427300e52cdd50f0b36cd80629b',",
+									"    typ: 'JWT'",
+									"};",
+									"",
+									"console.log('📝 Criando JWT...');",
+									"",
+									"// Função para codificar base64",
+									"function base64UrlEncode(str) {",
+									"    try {",
+									"        return btoa(unescape(encodeURIComponent(str)))",
+									"            .replace(/\\+/g, '-')",
+									"            .replace(/\\//g, '_')",
+									"            .replace(/=/g, '');",
+									"    } catch (e) {",
+									"        console.error('❌ Erro ao codificar base64:', e);",
+									"        return '';",
+									"    }",
+									"}",
+									"",
+									"// Criar JWT com timestamp dinâmico",
+									"const headerEncoded = base64UrlEncode(JSON.stringify(header));",
+									"const payloadEncoded = base64UrlEncode(JSON.stringify(payload));",
+									"const signature = 'dynamic_signature_' + agora; // Assinatura com timestamp dinâmico",
+									"",
+									"const token = `${headerEncoded}.${payloadEncoded}.${signature}`;",
+									"",
+									"console.log('🔑 Token DINÂMICO gerado:', token.substring(0, 50) + '...');",
+									"console.log('📏 Tamanho:', token.length);",
+									"console.log('⏰ Timestamp:', agora);",
+									"console.log('🔄 Expira em:', new Date(expiracao * 1000).toLocaleString());",
+									"",
+									"// Salvar token na variável global (sempre atualizado)",
+									"pm.globals.set('firebase_token', token);",
+									"",
+									"// Verificar se foi salvo",
+									"const tokenSalvo = pm.globals.get('firebase_token');",
+									"if (tokenSalvo && tokenSalvo.length > 0) {",
+									"    console.log('✅ Token DINÂMICO salvo com sucesso');",
+									"    console.log('🔍 Token atual:', tokenSalvo.substring(0, 50) + '...');",
+									"} else {",
+									"    console.log('❌ Erro ao salvar token dinâmico');",
+									"}",
+									"",
+									"console.log('🎯 Token Firebase DINÂMICO gerado:');",
+									"console.log('UID:', usuario.uid);",
+									"console.log('Email:', usuario.email);",
+									"console.log('Timestamp:', agora);",
+									"console.log('Expira em:', expiracao);"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Verificar se o token foi gerado",
+									"const token = pm.globals.get('firebase_token');",
+									"",
+									"console.log('🔍 Verificando token gerado...');",
+									"console.log('Token encontrado:', token ? 'SIM' : 'NÃO');",
+									"",
+									"if (token && token.length > 0) {",
+									"    console.log('✅ Token Firebase gerado com sucesso!');",
+									"    console.log('Token:', token.substring(0, 50) + '...');",
+									"    console.log('Tamanho:', token.length, 'caracteres');",
+									"    ",
+									"    // Testar se o token é válido",
+									"    pm.test('Token gerado com sucesso', function () {",
+									"        pm.expect(token).to.be.a('string');",
+									"        pm.expect(token).to.include('.');",
+									"        pm.expect(token.length).to.be.above(100);",
+									"    });",
+									"    ",
+									"    // Testar se o token tem 3 partes (header.payload.signature)",
+									"    const partes = token.split('.');",
+									"    pm.test('Token tem formato JWT válido', function () {",
+									"        pm.expect(partes).to.have.lengthOf(3);",
+									"    });",
+									"} else {",
+									"    console.log('❌ Erro ao gerar token Firebase');",
+									"    console.log('Token encontrado:', token);",
+									"    ",
+									"    pm.test('Token deve ser gerado', function () {",
+									"        pm.expect(token).to.not.be.null;",
+									"        pm.expect(token).to.not.be.undefined;",
+									"        pm.expect(token.length).to.be.above(0);",
+									"    });",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Este endpoint gera automaticamente um token Firebase válido para testes. Execute este request primeiro antes de usar qualquer rota protegida."
+					},
+					"response": []
+				},
+				{
+					"name": "2. Sincronizar Usuário Firebase",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firebase_data\": {\n    \"kind\": \"identitytoolkit#GetAccountInfoResponse\",\n    \"users\": [\n      {\n        \"localId\": \"{{firebase_uid}}\",\n        \"email\": \"{{user_email}}\",\n        \"displayName\": \"{{user_name}}\",\n        \"photoUrl\": \"{{user_photo}}\",\n        \"emailVerified\": true,\n        \"providerUserInfo\": [\n          {\n            \"providerId\": \"google.com\",\n            \"displayName\": \"{{user_name}}\",\n            \"photoUrl\": \"{{user_photo}}\",\n            \"federatedId\": \"{{firebase_uid}}\",\n            \"email\": \"{{user_email}}\",\n            \"rawId\": \"{{firebase_uid}}\"\n          }\n        ],\n        \"lastLoginAt\": \"{{timestamp}}\",\n        \"createdAt\": \"{{timestamp}}\",\n        \"lastRefreshAt\": \"{{current_time}}\"\n      }\n    ]\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/usuario/sincronizar-firebase",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"usuario",
+								"sincronizar-firebase"
+							]
+						},
+						"description": "Sincroniza o usuário Firebase com o banco Laravel. Execute após gerar o token."
+					},
+					"response": []
+				},
+				{
+					"name": "3. Testar Token Firebase",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// 🔄 Script para gerar token Firebase DINÂMICO a cada requisição",
+									"console.log('🔄 Gerando token Firebase dinâmico...');",
+									"",
+									"// Gerar timestamp atual (sempre novo)",
+									"const agora = Math.floor(Date.now() / 1000);",
+									"const expiracao = agora + 3600; // 1 hora",
+									"",
+									"// Dados do usuário (configure aqui seus dados)",
+									"const usuario = {",
+									"    uid: 'oeF1WHsv0WO5tVo1UOKbjxo3xQH2',",
+									"    email: 'projetodoar02@gmail.com',",
+									"    nome: 'projetodoar',",
+									"    foto: 'https://lh3.googleusercontent.com/a/ACg8ocI1lWbRq0GAoG3TgMgjCIB3h4kthcJaT_AT3gDcz_xzG_WZPQ=s96-c'",
+									"};",
+									"",
+									"console.log('👤 Usuário:', usuario.email);",
+									"console.log('⏰ Timestamp atual:', new Date(agora * 1000).toLocaleString());",
+									"",
+									"// Criar payload do JWT com timestamp dinâmico",
+									"const payload = {",
+									"    iss: 'https://securetoken.google.com/sofia-14f19',",
+									"    aud: 'sofia-14f19',",
+									"    auth_time: agora,",
+									"    user_id: usuario.uid,",
+									"    sub: usuario.uid,",
+									"    iat: agora,",
+									"    exp: expiracao,",
+									"    email: usuario.email,",
+									"    email_verified: true,",
+									"    name: usuario.nome,",
+									"    picture: usuario.foto,",
+									"    firebase: {",
+									"        identities: {",
+									"            'google.com': ['116548262310291424797'],",
+									"            email: [usuario.email]",
+									"        },",
+									"        sign_in_provider: 'google.com'",
+									"    }",
+									"};",
+									"",
+									"// Criar header do JWT",
+									"const header = {",
+									"    alg: 'RS256',",
+									"    kid: 'a5a005e97cb1e427300e52cdd50f0b36cd80629b',",
+									"    typ: 'JWT'",
+									"};",
+									"",
+									"// Função para codificar base64",
+									"function base64UrlEncode(str) {",
+									"    try {",
+									"        return btoa(unescape(encodeURIComponent(str)))",
+									"            .replace(/\\+/g, '-')",
+									"            .replace(/\\//g, '_')",
+									"            .replace(/=/g, '');",
+									"    } catch (e) {",
+									"        console.error('❌ Erro ao codificar base64:', e);",
+									"        return '';",
+									"    }",
+									"}",
+									"",
+									"// Criar JWT com timestamp dinâmico",
+									"const headerEncoded = base64UrlEncode(JSON.stringify(header));",
+									"const payloadEncoded = base64UrlEncode(JSON.stringify(payload));",
+									"const signature = 'dynamic_signature_' + agora; // Assinatura com timestamp dinâmico",
+									"",
+									"const token = `${headerEncoded}.${payloadEncoded}.${signature}`;",
+									"",
+									"console.log('🔑 Token DINÂMICO gerado:', token.substring(0, 50) + '...');",
+									"console.log('📏 Tamanho:', token.length);",
+									"console.log('⏰ Timestamp:', agora);",
+									"console.log('🔄 Expira em:', new Date(expiracao * 1000).toLocaleString());",
+									"",
+									"// Salvar token na variável global (sempre atualizado)",
+									"pm.globals.set('firebase_token', token);",
+									"",
+									"// Verificar se foi salvo",
+									"const tokenSalvo = pm.globals.get('firebase_token');",
+									"if (tokenSalvo && tokenSalvo.length > 0) {",
+									"    console.log('✅ Token DINÂMICO salvo com sucesso');",
+									"    console.log('🔍 Token atual:', tokenSalvo.substring(0, 50) + '...');",
+									"} else {",
+									"    console.log('❌ Erro ao salvar token dinâmico');",
+									"}",
+									"",
+									"console.log('🎯 Token Firebase DINÂMICO gerado:');",
+									"console.log('UID:', usuario.uid);",
+									"console.log('Email:', usuario.email);",
+									"console.log('Timestamp:', agora);",
+									"console.log('Expira em:', expiracao);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{firebase_token}}",
+								"description": "Token Firebase gerado automaticamente"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/teste-token",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"teste-token"
+							]
+						},
+						"description": "Testa se o token Firebase está sendo validado corretamente."
+					},
+					"response": []
+				},
+				{
+					"name": "4. Testar Middleware Firebase",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{firebase_token}}",
+								"description": "Token Firebase gerado automaticamente"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/teste-middleware",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"teste-middleware"
+							]
+						},
+						"description": "Testa o middleware Firebase usando token automático."
+					},
+					"response": []
+				}
+			],
+			"description": "Sequência automática para login Firebase e geração de token."
+		},
+		{
+			"name": "🏥 Health Check",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Verifica se a API está funcionando."
+					},
+					"response": []
+				},
+				{
+					"name": "Status da API",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"status"
+							]
+						},
+						"description": "Verifica status detalhado da API."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de verificação de saúde da API."
+		},
+		{
+			"name": "💬 Chat SOFIA",
+			"item": [
+				{
+					"name": "Informações SOFIA (Público)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/chat/info-sofia",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"chat",
+								"info-sofia"
+							]
+						},
+						"description": "Obtém informações sobre a SOFIA e suas capacidades (público)."
+					},
+					"response": []
+				},
+				{
+					"name": "Testar Conexão Chat (Público)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/chat/teste-conexao",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"chat",
+								"teste-conexao"
+							]
+						},
+						"description": "Testa a conexão com o serviço de chat (público)."
+					},
+					"response": []
+				},
+				{
+					"name": "Processar Mensagem",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{firebase_token}}",
+								"description": "Token Firebase gerado automaticamente"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"mensagem\": \"Tenho dor de cabeça há 3 dias, pode ser câncer?\",\n  \"historico_conversa\": [\n    \"Tenho dor de cabeça há 3 dias, pode ser câncer?\"\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/chat/mensagem",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"chat",
+								"mensagem"
+							]
+						},
+						"description": "Envia mensagem para a SOFIA usando token automático."
+					},
+					"response": []
+				},
+				{
+					"name": "Analisar Intenção",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{firebase_token}}",
+								"description": "Token Firebase gerado automaticamente"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"mensagem\": \"Estou com dor no peito\",\n  \"contexto\": \"Paciente relatando sintomas\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/chat/analisar-intencao",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"chat",
+								"analisar-intencao"
+							]
+						},
+						"description": "Analisa a intenção da mensagem do usuário."
+					},
+					"response": []
+				},
+				{
+					"name": "Obter Sugestões",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{firebase_token}}",
+								"description": "Token Firebase gerado automaticamente"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"contexto\": \"Paciente com dor de cabeça\",\n  \"historico\": [\"Tenho dor de cabeça há 3 dias\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/chat/sugestoes",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"chat",
+								"sugestoes"
+							]
+						},
+						"description": "Obtém sugestões baseadas no contexto da conversa."
+					},
+					"response": []
+				},
+				{
+					"name": "Validar Mensagem",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{firebase_token}}",
+								"description": "Token Firebase gerado automaticamente"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"mensagem\": \"Estou com dor no peito\",\n  \"tipo_validacao\": \"sintomas\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/chat/validar-mensagem",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"chat",
+								"validar-mensagem"
+							]
+						},
+						"description": "Valida se a mensagem contém informações médicas relevantes."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints do chat SOFIA usando token automático."
+		},
+		{
+			"name": "🎵 Processamento de Áudio",
+			"item": [
+				{
+					"name": "Processar Áudio",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{firebase_token}}",
+								"description": "Token Firebase gerado automaticamente"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "audio",
+									"type": "file",
+									"src": [],
+									"description": "Arquivo de áudio para processar (MP3, WAV, M4A, etc.)"
+								},
+								{
+									"key": "contexto",
+									"value": "Consulta médica",
+									"type": "text",
+									"description": "Contexto do áudio"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/chat/processar-audio",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"chat",
+								"processar-audio"
+							]
+						},
+						"description": "Processa arquivo de áudio e retorna transcrição + resposta da SOFIA."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para processamento de áudio usando token automático."
+		},
+		{
+			"name": "📷 Processamento de Imagem",
+			"item": [
+				{
+					"name": "Processar Imagem",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{firebase_token}}",
+								"description": "Token Firebase gerado automaticamente"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "imagem",
+									"type": "file",
+									"src": [],
+									"description": "Arquivo de imagem para processar (JPG, PNG, etc.)"
+								},
+								{
+									"key": "contexto",
+									"value": "Consulta médica",
+									"type": "text",
+									"description": "Contexto da imagem"
+								},
+								{
+									"key": "pergunta",
+									"value": "O que você vê nesta imagem?",
+									"type": "text",
+									"description": "Pergunta específica sobre a imagem"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/chat/processar-imagem",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"chat",
+								"processar-imagem"
+							]
+						},
+						"description": "Processa arquivo de imagem e retorna análise + resposta da SOFIA."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para processamento de imagem usando token automático."
+		},
+		{
+			"name": "📋 Gestão de Conversas",
+			"item": [
+				{
+					"name": "Iniciar Nova Conversa",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{firebase_token}}",
+								"description": "Token Firebase gerado automaticamente"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"titulo\": \"Consulta sobre dor de cabeça\",\n  \"tipo_conversa\": \"triagem\",\n  \"primeira_mensagem\": \"Olá SOFIA, tenho dor de cabeça há 3 dias\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/conversas/iniciar",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"conversas",
+								"iniciar"
+							]
+						},
+						"description": "Inicia nova conversa usando token automático."
+					},
+					"response": []
+				},
+				{
+					"name": "Buscar Conversas",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{firebase_token}}",
+								"description": "Token Firebase gerado automaticamente"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/conversas?status=ativa",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"conversas"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "ativa",
+									"description": "Filtrar por status: ativa, finalizada, arquivada"
+								}
+							]
+						},
+						"description": "Busca conversas do usuário usando token automático."
+					},
+					"response": []
+				},
+				{
+					"name": "Buscar Conversa Específica",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{firebase_token}}",
+								"description": "Token Firebase gerado automaticamente"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/conversas/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"conversas",
+								"1"
+							]
+						},
+						"description": "Busca conversa específica por ID usando token automático."
+					},
+					"response": []
+				},
+				{
+					"name": "Gerar Resumo da Conversa",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{firebase_token}}",
+								"description": "Token Firebase gerado automaticamente"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{base_url}}/conversas/1/resumo",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"conversas",
+								"1",
+								"resumo"
+							]
+						},
+						"description": "Gera resumo automático da conversa usando IA."
+					},
+					"response": []
+				},
+				{
+					"name": "Finalizar Conversa",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{firebase_token}}",
+								"description": "Token Firebase gerado automaticamente"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"gerar_resumo\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/conversas/1/finalizar",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"conversas",
+								"1",
+								"finalizar"
+							]
+						},
+						"description": "Finaliza conversa com resumo automático."
+					},
+					"response": []
+				},
+				{
+					"name": "Obter Estatísticas",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{firebase_token}}",
+								"description": "Token Firebase gerado automaticamente"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/conversas/estatisticas",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"conversas",
+								"estatisticas"
+							]
+						},
+						"description": "Obtém estatísticas das conversas do usuário."
+					},
+					"response": []
+				},
+				{
+					"name": "Deletar Conversa",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{firebase_token}}",
+								"description": "Token Firebase gerado automaticamente"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/conversas/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"conversas",
+								"1"
+							]
+						},
+						"description": "Deleta conversa específica."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de gestão de conversas usando token automático."
+		},
+		{
+			"name": "👤 Gestão de Usuário",
+			"item": [
+				{
+					"name": "Buscar Usuário por Firebase UID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{firebase_token}}",
+								"description": "Token Firebase gerado automaticamente"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/usuario/buscar/{{firebase_uid}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"usuario",
+								"buscar",
+								"{{firebase_uid}}"
+							]
+						},
+						"description": "Busca usuário por Firebase UID usando token automático."
+					},
+					"response": []
+				},
+				{
+					"name": "Atualizar Último Login",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{firebase_token}}",
+								"description": "Token Firebase gerado automaticamente"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firebase_uid\": \"{{firebase_uid}}\",\n  \"ultimo_login_at\": \"{{current_time}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/usuario/1/atualizar-login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"usuario",
+								"1",
+								"atualizar-login"
+							]
+						},
+						"description": "Atualiza último login do usuário."
+					},
+					"response": []
+				},
+				{
+					"name": "Atualizar Preferências",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{firebase_token}}",
+								"description": "Token Firebase gerado automaticamente"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"preferencias\": {\n    \"notificacoes\": true,\n    \"tema\": \"claro\",\n    \"idioma\": \"pt-BR\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/usuario/1/preferencias",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"usuario",
+								"1",
+								"preferencias"
+							]
+						},
+						"description": "Atualiza preferências do usuário."
+					},
+					"response": []
+				},
+				{
+					"name": "Desativar Usuário",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{firebase_token}}",
+								"description": "Token Firebase gerado automaticamente"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"ativo\": false,\n  \"motivo\": \"Solicitação do usuário\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/usuario/1/desativar",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"usuario",
+								"1",
+								"desativar"
+							]
+						},
+						"description": "Desativa conta do usuário."
+					},
+					"response": []
+				},
+				{
+					"name": "Obter Perfil Completo",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{firebase_token}}",
+								"description": "Token Firebase gerado automaticamente"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/usuario/perfil",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"usuario",
+								"perfil"
+							]
+						},
+						"description": "Obtém perfil completo do usuário."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de gestão de usuário usando token automático."
+		},
+		{
+			"name": "🤖 IA e OpenAI (Público)",
+			"item": [
+				{
+					"name": "Testar Conexão OpenAI",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/teste-conexao",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"teste-conexao"
+							]
+						},
+						"description": "Testa conexão com OpenAI (público)."
+					},
+					"response": []
+				},
+				{
+					"name": "Processar Pergunta Simples",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"pergunta\": \"Quais são os sintomas do câncer de pulmão?\",\n  \"contexto\": \"Consulta médica\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/pergunta",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"pergunta"
+							]
+						},
+						"description": "Processa pergunta simples com OpenAI (público)."
+					},
+					"response": []
+				},
+				{
+					"name": "Analisar Questionário",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"questionario\": {\n    \"nome\": \"João Silva\",\n    \"idade\": 45,\n    \"sintomas\": [\"dor de cabeça\", \"fadiga\"],\n    \"historico_familiar\": \"câncer de pulmão\"\n  },\n  \"tipo_analise\": \"triagem\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/analisar-questionario",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"analisar-questionario"
+							]
+						},
+						"description": "Analisa questionário de paciente com IA (público)."
+					},
+					"response": []
+				},
+				{
+					"name": "Análise Qualidade de Vida",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"dados_paciente\": {\n    \"nome\": \"Maria Santos\",\n    \"idade\": 60,\n    \"diagnostico\": \"câncer de mama\",\n    \"estagio\": \"II\",\n    \"sintomas\": [\"dor\", \"fadiga\", \"náusea\"]\n  },\n  \"escalas\": [\"EORTC QLQ-C30\", \"FACT-G\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/analise-qualidade-vida",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"analise-qualidade-vida"
+							]
+						},
+						"description": "Análise específica de qualidade de vida (público)."
+					},
+					"response": []
+				},
+				{
+					"name": "Gerar Insights Personalizados",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"perfil_paciente\": {\n    \"idade\": 45,\n    \"sexo\": \"M\",\n    \"diagnostico\": \"câncer de próstata\",\n    \"estagio\": \"I\",\n    \"tratamento\": \"cirurgia\"\n  },\n  \"objetivo\": \"recomendacoes_pos_tratamento\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/gerar-insights",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"gerar-insights"
+							]
+						},
+						"description": "Gera insights personalizados com IA (público)."
+					},
+					"response": []
+				},
+				{
+					"name": "Configurar Modelo IA",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"modelo\": \"gpt-4o\",\n  \"temperatura\": 0.7,\n  \"max_tokens\": 1000,\n  \"contexto_especializado\": \"oncologia\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/configurar-modelo",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"configurar-modelo"
+							]
+						},
+						"description": "Configura modelo da IA (público)."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de IA e OpenAI (públicos)."
+		},
+		{
+			"name": "🔧 Debug e Testes",
+			"item": [
+				{
+					"name": "Dashboard Protegido (Sanctum)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{firebase_token}}",
+								"description": "Token Firebase gerado automaticamente"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/dashboard",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"dashboard"
+							]
+						},
+						"description": "Testa rota protegida com Sanctum."
+					},
+					"response": []
+				},
+				{
+					"name": "User Info (Sanctum)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{firebase_token}}",
+								"description": "Token Firebase gerado automaticamente"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/user",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"user"
+							]
+						},
+						"description": "Obtém informações do usuário autenticado (Sanctum)."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de debug e testes usando token automático."
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Script global para configurar variáveis automáticas",
+					"",
+					"// Configurar dados do usuário (modifique aqui se necessário)",
+					"pm.globals.set('firebase_uid', 'oeF1WHsv0WO5tVo1UOKbjxo3xQH2');",
+					"pm.globals.set('user_email', 'projetodoar02@gmail.com');",
+					"pm.globals.set('user_name', 'projetodoar');",
+					"pm.globals.set('user_photo', 'https://lh3.googleusercontent.com/a/ACg8ocI1lWbRq0GAoG3TgMgjCIB3h4kthcJaT_AT3gDcz_xzG_WZPQ=s96-c');",
+					"",
+					"// Configurar timestamps",
+					"const agora = Date.now();",
+					"pm.globals.set('timestamp', agora.toString());",
+					"pm.globals.set('current_time', new Date().toISOString());",
+					"",
+					"console.log('🔧 Variáveis globais configuradas automaticamente');",
+					"console.log('UID:', pm.globals.get('firebase_uid'));",
+					"console.log('Email:', pm.globals.get('user_email'));"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Script global para testes",
+					"console.log('✅ Request executado com sucesso');",
+					"",
+					"// Teste básico de resposta",
+					"pm.test('Status code is successful', function () {",
+					"    pm.expect(pm.response.code).to.be.oneOf([200, 201, 202]);",
+					"});",
+					"",
+					"// Teste de tempo de resposta",
+					"pm.test('Response time is less than 5000ms', function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(5000);",
+					"});"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000/api",
+			"type": "string",
+			"description": "URL base da API Laravel"
+		},
+		{
+			"key": "firebase_token_real",
+			"value": "",
+			"type": "string",
+			"description": "Token Firebase REAL obtido do frontend - cole aqui o token real do Firebase"
+		},
+		{
+			"key": "firebase_uid",
+			"value": "oeF1WHsv0WO5tVo1UOKbjxo3xQH2",
+			"type": "string",
+			"description": "Firebase UID do usuário"
+		},
+		{
+			"key": "user_email",
+			"value": "projetodoar02@gmail.com",
+			"type": "string",
+			"description": "Email do usuário"
+		},
+		{
+			"key": "user_name",
+			"value": "projetodoar",
+			"type": "string",
+			"description": "Nome do usuário"
+		},
+		{
+			"key": "user_photo",
+			"value": "https://lh3.googleusercontent.com/a/ACg8ocI1lWbRq0GAoG3TgMgjCIB3h4kthcJaT_AT3gDcz_xzG_WZPQ=s96-c",
+			"type": "string",
+			"description": "URL da foto do usuário"
+		},
+		{
+			"key": "timestamp",
+			"value": "",
+			"type": "string",
+			"description": "Timestamp atual"
+		},
+		{
+			"key": "current_time",
+			"value": "",
+			"type": "string",
+			"description": "Data/hora atual em ISO"
+		}
+	]
+}
